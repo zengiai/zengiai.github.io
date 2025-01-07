@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据统计图表</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .input-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .data-list {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: 400px;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .delete-btn:hover {
+            background-color: #da190b;
+        }
+        .data-item {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>数据统计图表</h1>
+        
+<!--        <div class="input-section">-->
+<!--            <div>-->
+<!--                <input type="text" id="xAxisName" placeholder="X轴名称" value="类别">-->
+<!--                <input type="text" id="yAxisName" placeholder="Y轴名称" value="数值">-->
+<!--            </div>-->
+<!--            <div>-->
+<!--                &lt;!&ndash;在这里定义好自己想要的数据类型type&ndash;&gt;-->
+<!--                <select id="typeSelect">-->
+<!--                    <option value="">请选择...</option>-->
+<!--                    <option value="1">选项1</option>-->
+<!--                    <option value="2">选项2</option>-->
+<!--                    <option value="3">选项3</option>-->
+<!--                    <option value="4">选项4</option>-->
+<!--                    <option value="5">选项5</option>-->
+<!--                </select>-->
+<!--                <input type="text" id="dataName" placeholder="数据名称">-->
+<!--                <input type="number" id="dataValue" placeholder="数据值">-->
+<!--                <button onclick="addData()">添加数据</button>-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        <div class="data-list" id="dataList">-->
+<!--            <h3>当前数据：</h3>-->
+<!--        </div>-->
+
+        <div class="charts-grid">
+            <div class="chart-container" id="lineChart"></div>
+            <div class="chart-container" id="barChart"></div>
+            <div class="chart-container" id="pieChart"></div>
+            <div class="chart-container" id="areaChart"></div>
+        </div>
+    </div>
+
+    <script>
+        // 在这里定义自己想要的数据列表
+        let chartData = [
+            { name: '第一项', value: 400 },
+            { name: '第二项', value: 300 },
+            { name: '第三项', value: 600 },
+            { name: '第四项', value: 200 }
+        ];
+        let chartData1 = [];
+        let chartData2 = [];
+        let chartData3 = [];
+
+        // 初始化所有图表
+        const lineChart = echarts.init(document.getElementById('lineChart'));
+        const barChart = echarts.init(document.getElementById('barChart'));
+        const pieChart = echarts.init(document.getElementById('pieChart'));
+        const areaChart = echarts.init(document.getElementById('areaChart'));
+
+        // // 更新数据列表显示
+        // function updateDataList() {
+        //     const dataList = document.getElementById('dataList');
+        //     let html = '<h3>当前数据：</h3>';
+        //     chartData.forEach((item, index) => {
+        //         html += `
+        //             <div class="data-item">
+        //                 <span>${item.name}: ${item.value}</span>
+        //                 <button class="delete-btn" onclick="deleteData(${index})">删除</button>
+        //             </div>
+        //         `;
+        //     });
+        //     dataList.innerHTML = html;
+        // }
+
+        // // 添加数据方法
+        // function addData() {
+        //     const type = document.getElementById('typeSelect').value;
+        //     const name = document.getElementById('dataName').value;
+        //     const value = Number(document.getElementById('dataValue').value);
+        //
+        //     if (name && !isNaN(value)) {
+        //         push(type, name, value);
+        //         // chartData.push({ name, value });
+        //         document.getElementById('dataName').value = '';
+        //         document.getElementById('dataValue').value = '';
+        //         updateCharts();
+        //         updateDataList();
+        //     }
+        // }
+
+        /**
+         * 添加数据到指定列表
+         * @param type 数据的类别
+         * @param name 数据名字
+         * @param value 数据值
+         */
+        // function push(type, name ,value) {
+        //     // 如果新增类型type，在这里需要配置新的case
+        //     switch (type) {
+        //         case 1:
+        //             chartData1.push({name, value});
+        //             break;
+        //         case 2:
+        //             chartData2.push({name, value});
+        //             break;
+        //         case 3:
+        //             chartData3.push({name, value});
+        //             break;
+        //         default:
+        //             break;
+        //     }
+        // }
+
+        // // 删除数据
+        // function deleteData(index) {
+        //     chartData.splice(index, 1);
+        //     updateCharts();
+        //     updateDataList();
+        // }
+
+        // 更新所有图表
+        function updateCharts() {
+            const xAxisName = "x轴";
+            const yAxisName = "y轴";
+
+            // 折线图配置
+            // xAxis,yAxis中的data选择想要展示的数据列表charData
+            lineChart.setOption({
+                title: { text: '折线图' },
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                    type: 'category',
+                    data: chartData.map(item => item.name),
+                    name: xAxisName
+                },
+                yAxis: { 
+                    type: 'value',
+                    name: yAxisName
+                },
+                series: [{
+                    data: chartData.map(item => item.value),
+                    type: 'line',
+                    smooth: true
+                }]
+            });
+
+            // 柱状图配置
+            barChart.setOption({
+                title: { text: '柱状图' },
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                    type: 'category',
+                    data: chartData1.map(item => item.name),
+                    name: xAxisName
+                },
+                yAxis: { 
+                    type: 'value',
+                    name: yAxisName
+                },
+                series: [{
+                    data: chartData1.map(item => item.value),
+                    type: 'bar'
+                }]
+            });
+
+            // 饼图配置
+            pieChart.setOption({
+                title: { text: '饼图' },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b}: {c} ({d}%)'
+                },
+                series: [{
+                    name: '数据分布',
+                    type: 'pie',
+                    radius: '60%',
+                    data: chartData2
+                }]
+            });
+
+            // 面积图配置
+            areaChart.setOption({
+                title: { text: '面积图' },
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                    type: 'category',
+                    data: chartData3.map(item => item.name),
+                    name: xAxisName
+                },
+                yAxis: { 
+                    type: 'value',
+                    name: yAxisName
+                },
+                series: [{
+                    data: chartData3.map(item => item.value),
+                    type: 'line',
+                    areaStyle: {},
+                    smooth: true
+                }]
+            });
+        }
+
+        // 初始化显示
+        updateCharts();
+        updateDataList();
+
+        // 响应窗口大小变化
+        window.addEventListener('resize', function() {
+            lineChart.resize();
+            barChart.resize();
+            pieChart.resize();
+            areaChart.resize();
+        });
+    </script>
+</body>
+</html>
