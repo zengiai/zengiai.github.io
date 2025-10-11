@@ -3,47 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>字符串编码/解码工具</title>
+    <title>我的工具箱 - 首页</title>
+    <!-- 首页和工具页面将共享同一个 style.css -->
     <link rel="stylesheet" href="style.css">
-    <!-- 引入 Google Fonts，提供更好的字体选择，例如 Poppins -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>字符串编码/解码工具</h1>
+    <div class="homepage-container">
+        <h1>欢迎使用我的工具箱</h1>
+        <p class="subtitle">选择一个工具开始使用</p>
 
-        <div class="input-section">
-            <label for="inputText">输入字符串:</label>
-            <textarea id="inputText" placeholder="请输入要编码或解码的字符串..."></textarea>
-        </div>
-
-        <div class="action-section">
-            <div class="encoding-type-selector">
-                <label for="encodingType">选择编码方式:</label>
-                <select id="encodingType">
-                    <option value="base64">Base64</option>
-                    <option value="uri">URL Encoding (URI Component)</option>
-                    <option value="hex">Hexadecimal (Hex)</option> <!-- 新增 Hex -->
-                    <option value="html">HTML Entity</option>     <!-- 新增 HTML Entity -->
-                    <option value="GBK">GBK</option>     <!-- GBK -->
-                    <!-- 可以在这里添加更多编码类型，例如 hex -->
-                </select>
-            </div>
-
-            <div class="buttons">
-                <button id="encodeBtn">编码 (Encode)</button>
-                <button id="decodeBtn">解码 (Decode)</button>
-            </div>
-        </div>
-
-        <div class="output-section">
-            <label for="outputText">输出结果:</label>
-            <textarea id="outputText" readonly></textarea>
-            <button id="copyToClipboardBtn" class="secondary-btn">复制到剪贴板</button>
-            <span id="copyMessage" class="copy-message"></span>
+        <div class="tool-list">
+            <!-- 跳转到字符串编码/解码工具的链接 -->
+            <a href="encoder_decoder.html" class="tool-card">
+                <h2>字符串编码/解码工具</h2>
+                <p>支持 Base64, URL, Hex, HTML Entity, GBK 等多种格式的编码与解码。</p>
+            </a>
+            <!-- 未来，您可以在这里添加更多工具的链接 -->
+            <!-- <a href="another_tool.html" class="tool-card">
+                <h2>另一个工具示例</h2>
+                <p>这里是另一个工具的简要描述和功能介绍。</p>
+            </a> -->
         </div>
     </div>
-
-    <script src="script.js"></script>
 </body>
 </html>
