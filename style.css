@@ -1,0 +1,239 @@
+/* 引入 Google Fonts 样式，确保 Poppins 字体可用 */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary-color: #4A90E2;    /* 主题蓝 */
+    --secondary-color: #6C757D;  /* 次要按钮灰 */
+    --background-light: #F8F9FA; /* 浅背景 */
+    --background-dark: #E9ECEF;  /* 稍深背景，用于分隔 */
+    --text-color-dark: #343A40;  /* 深色文本 */
+    --text-color-medium: #6C757D; /* 中等文本，如标签 */
+    --border-color: #DEE2E6;     /* 边框颜色 */
+    --success-color: #28A745;    /* 成功消息绿 */
+    --danger-color: #DC3545;     /* 错误消息红 */
+    --font-heading: 'Poppins', sans-serif;
+    --font-body: 'Poppins', sans-serif;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--background-light);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center; /* 垂直居中 */
+    min-height: 100vh;
+    color: var(--text-color-dark);
+    line-height: 1.6;
+}
+
+.container {
+    background-color: #fff;
+    padding: 35px 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); /* 更深的阴影效果 */
+    width: 90%;
+    max-width: 850px; /* 增加最大宽度 */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 25px; /* 增加各 सेक्शन 之间的间距 */
+}
+
+h1 {
+    font-family: var(--font-heading);
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 15px; /* 调整标题下边距 */
+    font-size: 2.3em;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 500; /* 调整字重 */
+    color: var(--text-color-medium);
+    font-size: 0.95em;
+}
+
+textarea {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 20px; /* 与下一个元素保持距离 */
+    border: 1px solid var(--border-color);
+    border-radius: 8px; /* 更圆润的边角 */
+    font-size: 1em;
+    font-family: var(--font-body);
+    color: var(--text-color-dark);
+    box-sizing: border-box;
+    min-height: 120px; /* 增加最小高度 */
+    resize: vertical;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease; /* 添加过渡效果 */
+}
+
+textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2); /* 焦点阴影 */
+    outline: none;
+}
+
+.action-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end; /* 底部对齐 */
+    flex-wrap: wrap;
+    gap: 20px; /* 元素间距 */
+}
+
+.encoding-type-selector {
+    flex-grow: 1; /* 占据可用空间 */
+    min-width: 200px; /* 最小宽度 */
+}
+
+select {
+    width: 100%; /* 宽度占满父容器 */
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px; /* 更圆润的边角 */
+    font-size: 1em;
+    font-family: var(--font-body);
+    background-color: #fff;
+    appearance: none; /* 移除默认箭头 */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" fill-rule="evenodd"></path></svg>'); /* 自定义箭头 */
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 1em;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+    outline: none;
+}
+
+.buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 8px; /* 更圆润的边角 */
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 1.05em;
+    font-family: var(--font-heading);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 10px rgba(74, 144, 226, 0.2); /* 按钮阴影 */
+    flex-shrink: 0; /* 防止按钮收缩 */
+}
+
+button:hover {
+    background-color: #3f7ac2; /* 悬停颜色 */
+    transform: translateY(-2px); /* 略微上浮效果 */
+    box-shadow: 0 6px 15px rgba(74, 144, 226, 0.3);
+}
+
+button:active {
+    background-color: #315e9e; /* 点击颜色 */
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.secondary-btn {
+    background-color: var(--secondary-color);
+    box-shadow: 0 4px 10px rgba(108, 117, 125, 0.2);
+}
+
+.secondary-btn:hover {
+    background-color: #5a6268;
+    box-shadow: 0 6px 15px rgba(108, 117, 125, 0.3);
+}
+
+.secondary-btn:active {
+    background-color: #494f54;
+}
+
+.output-section {
+    position: relative;
+    margin-top: 10px; /* 增加与上方内容的间距 */
+}
+
+.copy-message {
+    position: absolute;
+    bottom: 30px; /* 调整位置，使其在复制按钮上方 */
+    right: 15px;
+    background-color: var(--success-color); /* 成功颜色 */
+    color: white;
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    opacity: 0;
+    transition: opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); /* 更平滑的过渡 */
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.2);
+}
+
+.copy-message.show {
+    opacity: 1;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .container {
+        padding: 25px 30px;
+        gap: 20px;
+    }
+
+    h1 {
+        font-size: 2em;
+        margin-bottom: 20px;
+    }
+
+    .action-section {
+        flex-direction: column;
+        align-items: stretch; /* 元素拉伸占满宽度 */
+        gap: 15px;
+    }
+
+    .encoding-type-selector {
+        width: 100%; /* 确保选择框在小屏幕下占满宽度 */
+        min-width: unset; /* 移除最小宽度限制 */
+    }
+
+    .buttons {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+
+    button {
+        width: 100%;
+        padding: 14px 20px; /* 调整按钮大小 */
+        font-size: 1em;
+    }
+
+    textarea {
+        min-height: 100px;
+    }
+
+    .copy-message {
+        bottom: 5px; /* 在小屏幕上将其放回底部，避免遮挡 */
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap; /* 防止文本换行 */
+    }
+}

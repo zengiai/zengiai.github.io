@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字符串编码/解码工具</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 引入 Google Fonts，提供更好的字体选择，例如 Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>字符串编码/解码工具</h1>
+
+        <div class="input-section">
+            <label for="inputText">输入字符串:</label>
+            <textarea id="inputText" placeholder="请输入要编码或解码的字符串..."></textarea>
+        </div>
+
+        <div class="action-section">
+            <div class="encoding-type-selector">
+                <label for="encodingType">选择编码方式:</label>
+                <select id="encodingType">
+                    <option value="base64">Base64</option>
+                    <option value="uri">URL Encoding (URI Component)</option>
+                    <option value="hex">Hexadecimal (Hex)</option> <!-- 新增 Hex -->
+                    <option value="html">HTML Entity</option>     <!-- 新增 HTML Entity -->
+                    <option value="GBK">GBK</option>     <!-- GBK -->
+                    <!-- 可以在这里添加更多编码类型，例如 hex -->
+                </select>
+            </div>
+
+            <div class="buttons">
+                <button id="encodeBtn">编码 (Encode)</button>
+                <button id="decodeBtn">解码 (Decode)</button>
+            </div>
+        </div>
+
+        <div class="output-section">
+            <label for="outputText">输出结果:</label>
+            <textarea id="outputText" readonly></textarea>
+            <button id="copyToClipboardBtn" class="secondary-btn">复制到剪贴板</button>
+            <span id="copyMessage" class="copy-message"></span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
