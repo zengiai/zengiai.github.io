@@ -1,0 +1,330 @@
+/* 引入 Google Fonts 样式，确保 Poppins 字体可用 */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* --- 全局样式变量 --- */
+:root {
+    --primary-color: #4A90E2;    /* 主题蓝 */
+    --secondary-color: #6C757D;  /* 次要按钮灰 */
+    --background-light: #F8F9FA; /* 浅背景 */
+    --background-dark: #E9ECEF;  /* 稍深背景，用于分隔 */
+    --text-color-dark: #343A40;  /* 深色文本 */
+    --text-color-medium: #6C757D; /* 中等文本，如标签 */
+    --border-color: #DEE2E6;     /* 边框颜色 */
+    --success-color: #28A745;    /* 成功消息绿 */
+    --danger-color: #DC3545;     /* 错误消息红 */
+    --font-heading: 'Poppins', sans-serif;
+    --font-body: 'Poppins', sans-serif;
+}
+
+/* --- 所有页面的通用 Body 样式 --- */
+body {
+    font-family: var(--font-body);
+    background-color: var(--background-light);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center; /* 垂直居中 */
+    min-height: 100vh;
+    color: var(--text-color-dark);
+    line-height: 1.6;
+}
+
+/* --- 字符串编码/解码工具页 (encoder_decoder.html) 样式 --- */
+.container { /* 这是工具页面主内容的容器 */
+    background-color: #fff;
+    padding: 35px 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 850px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.container h1 { /* 工具页面标题样式 */
+    font-family: var(--font-heading);
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 2.3em;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 500;
+    color: var(--text-color-medium);
+    font-size: 0.95em;
+}
+
+textarea {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
+    font-family: var(--font-body);
+    color: var(--text-color-dark);
+    box-sizing: border-box;
+    min-height: 120px;
+    resize: vertical;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+    outline: none;
+}
+
+.action-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.encoding-type-selector {
+    flex-grow: 1;
+    min-width: 200px;
+}
+
+select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
+    font-family: var(--font-body);
+    background-color: #fff;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" fill-rule="evenodd"></path></svg>');
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 1em;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+    outline: none;
+}
+
+.buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 1.05em;
+    font-family: var(--font-heading);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 10px rgba(74, 144, 226, 0.2);
+    flex-shrink: 0;
+}
+
+button:hover {
+    background-color: #3f7ac2;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(74, 144, 226, 0.3);
+}
+
+button:active {
+    background-color: #315e9e;
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.secondary-btn {
+    background-color: var(--secondary-color);
+    box-shadow: 0 4px 10px rgba(108, 117, 125, 0.2);
+}
+
+.secondary-btn:hover {
+    background-color: #5a6268;
+    box-shadow: 0 6px 15px rgba(108, 117, 125, 0.3);
+}
+
+.secondary-btn:active {
+    background-color: #494f54;
+}
+
+.output-section {
+    position: relative;
+    margin-top: 10px;
+}
+
+.copy-message {
+    position: absolute;
+    bottom: 30px;
+    right: 15px;
+    background-color: var(--success-color);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    opacity: 0;
+    transition: opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.2);
+}
+
+.copy-message.show {
+    opacity: 1;
+}
+
+/* --- 字符串编码/解码工具页 (encoder_decoder.html) 响应式调整 --- */
+@media (max-width: 768px) {
+    .container {
+        padding: 25px 30px;
+        gap: 20px;
+    }
+
+    .container h1 {
+        font-size: 2em;
+        margin-bottom: 20px;
+    }
+
+    .action-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .encoding-type-selector {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .buttons {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+
+    button {
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 1em;
+    }
+
+    textarea {
+        min-height: 100px;
+    }
+
+    .copy-message {
+        bottom: 5px;
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+    }
+}
+
+/* --- 新增：首页 (index.html) 样式 --- */
+.homepage-container { /* 首页主内容的容器 */
+    background-color: #fff;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 900px; /* 首页容器可以稍宽 */
+    box-sizing: border-box;
+    text-align: center; /* 首页内容居中 */
+}
+
+.homepage-container h1 { /* 首页标题样式 */
+    font-family: var(--font-heading);
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    font-size: 2.8em; /* 首页标题更大 */
+    font-weight: 700;
+    letter-spacing: -1px;
+}
+
+.homepage-container .subtitle { /* 首页副标题样式 */
+    font-size: 1.1em;
+    color: var(--text-color-medium);
+    margin-bottom: 40px;
+}
+
+.tool-list {
+    display: grid; /* 使用 CSS Grid 布局工具卡片 */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 响应式网格，自动适应列数 */
+    gap: 25px; /* 卡片之间的间距 */
+    margin-top: 30px;
+}
+
+.tool-card {
+    display: block; /* 使整个卡片可点击 */
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 25px;
+    text-decoration: none; /* 移除链接下划线 */
+    color: var(--text-color-dark);
+    text-align: left; /* 卡片内文本左对齐 */
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* 细微阴影 */
+}
+
+.tool-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); /* 鼠标悬停时更明显的阴影 */
+    transform: translateY(-5px); /* 悬停上浮效果 */
+    background-color: #eaf3ff; /* 悬停时浅蓝色背景 */
+}
+
+.tool-card h2 {
+    font-family: var(--font-heading);
+    font-size: 1.5em;
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.tool-card p {
+    font-size: 0.95em;
+    color: var(--text-color-medium);
+    margin-bottom: 0;
+}
+
+/* --- 首页 (index.html) 响应式调整 --- */
+@media (max-width: 768px) {
+    .homepage-container {
+        padding: 30px;
+    }
+
+    .homepage-container h1 {
+        font-size: 2.2em;
+    }
+
+    .homepage-container .subtitle {
+        font-size: 1em;
+    }
+
+    .tool-list {
+        grid-template-columns: 1fr; /* 在小屏幕上堆叠卡片 */
+    }
+}
