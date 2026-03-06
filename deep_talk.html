@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Talk - 智能对话</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+        }
+
+        .header {
+            background-color: #1e293b;
+            color: white;
+            padding: 1rem 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            height: calc(100vh - 140px);
+        }
+
+        .scrollable-chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            position: relative;
+            animation: fadeIn 0.2s ease-out;
+            word-wrap: break-word;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .agent-message {
+            align-self: flex-start;
+            background-color: white;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: #3b82f6;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-header {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .agent-message .message-header {
+            color: #64748b;
+        }
+
+        .user-message .message-header {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .markdown-content {
+            overflow-wrap: break-word;
+        }
+
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
+        .markdown-content h6 {
+            margin-top: 1rem;
+            margin-bottom: 0.75rem;
+            color: #1e293b;
+        }
+
+        .markdown-content h1 { font-size: 1.5rem; }
+        .markdown-content h2 { font-size: 1.375rem; }
+        .markdown-content h3 { font-size: 1.25rem; }
+        .markdown-content h4 { font-size: 1.125rem; }
+        .markdown-content h5 { font-size: 1rem; }
+        .markdown-content h6 { font-size: 0.875rem; }
+
+        .markdown-content p {
+            margin-bottom: 1rem;
+        }
+
+        .markdown-content ul,
+        .markdown-content ol {
+            margin: 0.75rem 0 1rem 1.5rem;
+        }
+
+        .markdown-content li {
+            margin-bottom: 0.25rem;
+        }
+
+        .markdown-content pre {
+            background-color: #1e293b;
+            color: #f1f5f9;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+        }
+
+        .markdown-content code {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', 'Source Code Pro', monospace;
+            background-color: #f1f5f9;
+            color: #dc2626;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+
+        .markdown-content pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+
+        .markdown-content blockquote {
+            border-left: 3px solid #94a3b8;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .input-container {
+            padding: 1.25rem;
+            background-color: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 0.875rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            resize: none;
+            height: 72px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        #user-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        #send-btn {
+            padding: 0.875rem 1.5rem;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        #send-btn:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+
+        #send-btn:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            background-color: white;
+            color: #64748b;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            display: none;
+            border: 1px solid #e2e8f0;
+            border-bottom-left-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Deep Talk - 智能对话</h1>
+    </div>
+    
+    <div class="chat-container">
+        <div class="scrollable-chat" id="chat-messages"></div>
+        
+        <div class="typing-indicator" id="typing-indicator">
+            智能体正在思考...
+        </div>
+        
+        <div class="input-container">
+            <textarea id="user-input" placeholder="输入你的消息..."></textarea>
+            <button id="send-btn">发送</button>
+        </div>
+    </div>
+
+    <!-- 引入 marked.js 用于 Markdown 渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        // 初始化 marked
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        // DOM 元素引用
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        // 添加消息到聊天窗口
+        function addMessage(content, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(isUser ? 'user-message' : 'agent-message');
+            
+            // 添加消息头
+            const headerDiv = document.createElement('div');
+            headerDiv.classList.add('message-header');
+            headerDiv.textContent = isUser ? '你' : '智能体';
+            messageDiv.appendChild(headerDiv);
+            
+            if (!isUser) {
+                // 对于智能体消息，使用 Markdown 渲染
+                const markdownDiv = document.createElement('div');
+                markdownDiv.classList.add('markdown-content');
+                try {
+                    markdownDiv.innerHTML = marked.parse(content);
+                } catch (e) {
+                    // 如果markdown解析出错，回退到纯文本显示
+                    markdownDiv.textContent = content;
+                }
+                messageDiv.appendChild(markdownDiv);
+            } else {
+                // 对于用户消息，直接显示文本
+                const contentDiv = document.createElement('div');
+                contentDiv.textContent = content;
+                messageDiv.appendChild(contentDiv);
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 流式接收 SSE 数据并实时更新消息
+        async function streamResponse(prompt) {
+            // 显示打字指示器
+            typingIndicator.style.display = 'block';
+            scrollToBottom();
+
+            try {
+                // 创建一个新的消息框来显示智能体响应
+                const agentMessageDiv = document.createElement('div');
+                agentMessageDiv.classList.add('message', 'agent-message');
+                
+                // 添加消息头
+                const headerDiv = document.createElement('div');
+                headerDiv.classList.add('message-header');
+                headerDiv.textContent = '智能体';
+                agentMessageDiv.appendChild(headerDiv);
+                
+                const markdownDiv = document.createElement('div');
+                markdownDiv.classList.add('markdown-content');
+                agentMessageDiv.appendChild(markdownDiv);
+                
+                chatMessages.appendChild(agentMessageDiv);
+
+                // 发送 POST 请求到 SSE 端点
+                const response = await fetch('http://localhost:8083/chat/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: prompt })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let accumulatedContent = ''; // 累积的内容
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        break;
+                    }
+
+                    // 解码接收到的数据
+                    const chunk = decoder.decode(value, { stream: true });
+                    buffer += chunk;
+
+                    // 处理 SSE 格式的数据块
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // 保留不完整的行
+
+                    for (const line of lines) {
+                        const trimmedLine = line.trim(); // 去除首尾空白字符
+                        
+                        if (trimmedLine.startsWith('data: ')) {
+                            let data = trimmedLine.slice(6).trim(); // 移除 'data: ' 前缀并去除空白
+                            
+                            if (data === '[DONE]') {
+                                // 结束标识
+                                break;
+                            }
+                            
+                            if (data === '') {
+                                // 空数据，跳过
+                                continue;
+                            }
+                            
+                            // 尝试解析 JSON 数据，如果失败则使用原始数据
+                            let actualData = data;
+                            try {
+                                const parsed = JSON.parse(data);
+                                // 如果解析成功，尝试获取实际的消息内容
+                                if (typeof parsed === 'string') {
+                                    actualData = parsed;
+                                } else if (parsed.content !== undefined) {
+                                    actualData = parsed.content;
+                                } else if (parsed.text !== undefined) {
+                                    actualData = parsed.text;
+                                } else if (parsed.message !== undefined) {
+                                    actualData = parsed.message;
+                                } else if (parsed.data !== undefined) {
+                                    actualData = parsed.data;
+                                } else {
+                                    // 如果是对象但没有预期的字段，转换为字符串
+                                    actualData = data; // 使用原始数据而不是JSON序列化
+                                }
+                            } catch (e) {
+                                // 如果不是有效的 JSON，使用原始数据
+                                actualData = data;
+                            }
+                            
+                            // 将数据追加到累积内容中
+                            accumulatedContent += actualData;
+                            
+                            // 实时更新消息内容，实现流式输出效果
+                            // 为了避免在流式渲染时出现markdown语法不完整的问题，检查特殊语法标记
+                            const codeBackticksCount = (accumulatedContent.match(/`/g) || []).length;
+                            const codeBlockCount = (accumulatedContent.match(/```/g) || []).length;
+                            
+                            // 如果反引号数量为奇数（意味着可能有未闭合的行内代码）或者有奇数个代码块标记
+                            if (codeBlockCount > 0 && codeBlockCount % 2 === 1) {
+                                // 如果有未闭合的代码块，暂时显示为纯文本
+                                markdownDiv.textContent = accumulatedContent;
+                            } else if (codeBackticksCount > 0 && codeBackticksCount % 2 === 1) {
+                                // 如果有未闭合的行内代码，暂时显示为纯文本
+                                markdownDiv.textContent = accumulatedContent;
+                            } else {
+                                try {
+                                    const renderedContent = marked.parse(accumulatedContent);
+                                    markdownDiv.innerHTML = renderedContent;
+                                } catch (e) {
+                                    // 如果markdown解析出错，回退到纯文本显示
+                                    markdownDiv.textContent = accumulatedContent;
+                                }
+                            }
+                            scrollToBottom();
+                        } else if (trimmedLine === '') {
+                            // 忽略空行，这在SSE协议中表示心跳或分隔符
+                            continue;
+                        }
+                    }
+                }
+
+                // 隐藏打字指示器
+                typingIndicator.style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error streaming response:', error);
+                
+                // 错误处理
+                typingIndicator.style.display = 'none';
+                
+                const errorMessage = document.createElement('div');
+                errorMessage.classList.add('message', 'agent-message');
+                
+                // 添加错误消息头
+                const headerDiv = document.createElement('div');
+                headerDiv.classList.add('message-header');
+                headerDiv.textContent = '智能体';
+                errorMessage.appendChild(headerDiv);
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.textContent = '抱歉，出现了错误：' + error.message;
+                errorMessage.appendChild(contentDiv);
+                
+                chatMessages.appendChild(errorMessage);
+                scrollToBottom();
+            }
+        }
+
+        // 发送消息处理
+        async function sendMessage() {
+            const prompt = userInput.value.trim();
+            if (!prompt) return;
+
+            // 添加用户消息到界面
+            addMessage(prompt, true);
+            
+            // 清空输入框
+            userInput.value = '';
+            
+            // 调用流式响应函数
+            await streamResponse(prompt);
+        }
+
+        // 事件监听器
+        sendBtn.addEventListener('click', sendMessage);
+
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // 页面加载时聚焦到输入框
+        window.onload = function() {
+            userInput.focus();
+            
+            // 添加欢迎消息
+            addMessage("你好！我是 Deep Talk 智能助手，可以回答问题、创作文字等。请输入你的问题。", false);
+        };
+    </script>
+</body>
+</html>

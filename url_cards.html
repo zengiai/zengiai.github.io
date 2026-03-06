@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL导航卡片</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* 搜索框样式 */
+        .search-container {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .search-input {
+            width: 100%;
+            max-width: 500px;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .search-input::placeholder {
+            color: #b2bec3;
+        }
+
+        /* 分类标签样式 */
+        .category-tabs {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .category-tab {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .category-tab:hover {
+            background: rgba(255, 255, 255, 0.35);
+            transform: translateY(-2px);
+        }
+
+        .category-tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 结果数量显示 */
+        .result-count {
+            text-align: center;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        /* 卡片网格 */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            padding: 20px 0;
+        }
+
+        .url-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            min-height: 220px;
+        }
+
+        .url-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .url-card:hover .card-icon {
+            transform: scale(1.1);
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 12px;
+            word-break: break-word;
+        }
+
+        .card-description {
+            font-size: 14px;
+            color: #636e72;
+            line-height: 1.6;
+            flex-grow: 1;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-url {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #b2bec3;
+            word-break: break-all;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            color: white;
+            padding: 60px 20px;
+            font-size: 18px;
+        }
+
+        .empty-state .emoji {
+            font-size: 64px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        /* 不同颜色的卡片图标背景 */
+        .icon-blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .icon-green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .icon-orange { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .icon-yellow { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .icon-cyan { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .icon-purple { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
+        .icon-red { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); }
+        .icon-teal { background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 工作导航</h1>
+
+        <!-- 搜索框 -->
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="🔍 搜索链接、描述...">
+        </div>
+
+        <!-- 分类标签 -->
+        <div class="category-tabs" id="categoryTabs">
+            <button class="category-tab active" data-category="all">全部</button>
+            <button class="category-tab" data-category="dev">💻 代码开发</button>
+            <button class="category-tab" data-category="app">⚙️ 应用管理</button>
+            <button class="category-tab" data-category="monitor">📊 监控日志</button>
+            <button class="category-tab" data-category="container">🐳 容器云服务</button>
+            <button class="category-tab" data-category="mq">📨 消息队列</button>
+            <button class="category-tab" data-category="config">🗃️ 配置管理</button>
+            <button class="category-tab" data-category="project">📋 项目文档</button>
+        </div>
+
+        <!-- 结果数量 -->
+        <div class="result-count" id="resultCount"></div>
+
+        <!-- 卡片网格 -->
+        <div class="cards-grid" id="cardsGrid">
+            <!-- 卡片将通过 JavaScript 动态生成 -->
+        </div>
+    </div>
+
+    <script>
+        // URL 列表数据
+        const urlList = [
+            {
+                title: "GitLab",
+                description: "虎扑内部代码托管平台，版本控制、CI/CD、协作开发",
+                url: "http://gitlab.hupu.com/",
+                icon: "🦊",
+                iconColor: "icon-orange",
+                category: "dev"
+            },
+            {
+                title: "RIG管理",
+                description: "RIG管理平台首页",
+                url: "https://rig.hupu.io/manage#/home",
+                icon: "⚙️",
+                iconColor: "icon-blue",
+                category: "app"
+            },
+            {
+                title: "ATEL",
+                description: "ATEL应用探索平台",
+                url: "https://atel.hupu.io/#/discover",
+                icon: "🚀",
+                iconColor: "icon-purple",
+                category: "app"
+            },
+            {
+                title: "飞书文档",
+                description: "虎扑飞书云文档，文档协作与知识管理",
+                url: "https://hupu.feishu.cn/drive/home/",
+                icon: "📄",
+                iconColor: "icon-cyan",
+                category: "project"
+            },
+            {
+                title: "Job Admin",
+                description: "Job定时任务管理 - 生产环境",
+                url: "https://job-admin.hupu.io/",
+                icon: "📋",
+                iconColor: "icon-green",
+                category: "app"
+            },
+            {
+                title: "Job Admin STG",
+                description: "Job定时任务管理 - 测试环境",
+                url: "https://job-admin-stg.hupu.io/",
+                icon: "🧪",
+                iconColor: "icon-yellow",
+                category: "app"
+            },
+            {
+                title: "Job Admin SIT",
+                description: "Job定时任务管理 - SIT环境",
+                url: "http://job-admin-sit.hupu.io/",
+                icon: "🧫",
+                iconColor: "icon-orange",
+                category: "app"
+            },
+            {
+                title: "Cloud负载",
+                description: "Cloud平台应用负载监控",
+                url: "https://cloud.hupu.io/app_load/workload?page=1&page_size=10",
+                icon: "☁️",
+                iconColor: "icon-blue",
+                category: "monitor"
+            },
+            {
+                title: "AF应用管理",
+                description: "AF应用管理平台 - 生产环境",
+                url: "https://af.hupu.com/afMain#/myApp",
+                icon: "📦",
+                iconColor: "icon-purple",
+                category: "app"
+            },
+            {
+                title: "AF应用管理 SIT",
+                description: "AF应用管理平台 - SIT环境",
+                url: "https://af-sit.hupu.com/afMain#/myApp",
+                icon: "📦",
+                iconColor: "icon-yellow",
+                category: "app"
+            },
+            {
+                title: "Grafana",
+                description: "Grafana全局监控看板，实时监控各项指标",
+                url: "https://grafana.hupu.io/d/eMd7dtHSk/quan-ju-kan-ban?orgId=1&refresh=10s",
+                icon: "📊",
+                iconColor: "icon-blue",
+                category: "monitor"
+            },
+            {
+                title: "Mock API",
+                description: "Mock API接口平台",
+                url: "https://mock-api.hupu.io/group/2531",
+                icon: "🎭",
+                iconColor: "icon-green",
+                category: "project"
+            },
+            {
+                title: "Daeye",
+                description: "Daeye数据可视化仪表盘",
+                url: "https://daeye.hupu.io/dashboard/index",
+                icon: "👁️",
+                iconColor: "icon-cyan",
+                category: "monitor"
+            },
+            {
+                title: "Swagger UI",
+                description: "MSV Zuul API文档",
+                url: "http://msv-zuul-sit.hupu.io/eg-core-msv/swagger-ui.html",
+                icon: "📖",
+                iconColor: "icon-orange",
+                category: "dev"
+            },
+            {
+                title: "HCE",
+                description: "HCE容器引擎管理平台",
+                url: "https://hce.hupu.io/",
+                icon: "🐳",
+                iconColor: "icon-blue",
+                category: "container"
+            },
+            {
+                title: "Caesar",
+                description: "Caesar容器服务概览",
+                url: "https://caesar.hupu.io/#/hcsf/overview",
+                icon: "🏗️",
+                iconColor: "icon-purple",
+                category: "container"
+            },
+            {
+                title: "Flex",
+                description: "Flex弹性伸缩管理 - 生产环境",
+                url: "https://flex.hupu.io/overview?environment=prod&auto_refresh=60",
+                icon: "🔄",
+                iconColor: "icon-teal",
+                category: "container"
+            },
+            {
+                title: "腾讯MQ",
+                description: "腾讯云TDMQ RocketMQ管理控制台",
+                url: "https://console.cloud.tencent.com/trocketmq/index?tab=tutorial",
+                icon: "📨",
+                iconColor: "icon-blue",
+                category: "mq"
+            },
+            {
+                title: "CMDB",
+                description: "CMDB配置管理数据库",
+                url: "https://cmdb.hupu.io/v2/home",
+                icon: "🗃️",
+                iconColor: "icon-green",
+                category: "config"
+            },
+            {
+                title: "Eureka",
+                description: "服务注册与发现中心 - SIT环境",
+                url: "http://msv-eureka-sit.hupu.io/",
+                icon: "🔍",
+                iconColor: "icon-orange",
+                category: "config"
+            },
+            {
+                title: "Kaleido",
+                description: "Kaleido服务监控平台",
+                url: "https://kaleido.hupu.io/hss",
+                icon: "🎪",
+                iconColor: "icon-purple",
+                category: "monitor"
+            },
+            {
+                title: "阿里MQ",
+                description: "阿里云ONS消息队列管理",
+                url: "https://ons.console.aliyun.com/overview",
+                icon: "📤",
+                iconColor: "icon-blue",
+                category: "mq"
+            },
+            {
+                title: "TAPD",
+                description: "TAPD敏捷研发管理平台",
+                url: "https://www.tapd.cn/my_dashboard",
+                icon: "📊",
+                iconColor: "icon-cyan",
+                category: "project"
+            },
+            {
+                title: "TJ Stats",
+                description: "统计数据API文档",
+                url: "https://open.tjstats.com/val-auth-app/swagger/v1/index.html#/%E7%BB%9F%E8%AE%A1%E6%95%B0%E6%8D%AE/get_statistics_agent",
+                icon: "📈",
+                iconColor: "icon-green",
+                category: "project"
+            },
+            {
+                title: "Kibana",
+                description: "Kibana日志分析平台",
+                url: "https://kibana.hupu.io/login?next=%2F#?_g=()",
+                icon: "🔎",
+                iconColor: "icon-orange",
+                category: "monitor"
+            },
+            {
+                title: "Apipost文档",
+                description: "Apipost API接口文档",
+                url: "https://doc.apipost.net/docs/detail/466090b4787c000?locale=zh-cn&target_id=3a4a06a",
+                icon: "📝",
+                iconColor: "icon-teal",
+                category: "dev"
+            },
+            {
+                title: "Themis",
+                description: "Themis代码扫描平台",
+                url: "https://themis.hupu.io/",
+                icon: "🛡️",
+                iconColor: "icon-blue",
+                category: "dev"
+            },
+            {
+                title: "Aries SIT",
+                description: "Aries代码扫描任务 - SIT环境",
+                url: "https://aries-sit.hupu.io/git/scanning_task?page=1&page_size=10",
+                icon: "⚔️",
+                iconColor: "icon-red",
+                category: "dev"
+            },
+            {
+                title: "Grafana K8s",
+                description: "Kubernetes集群监控看板",
+                url: "https://grafana-k8s.hupu.io/?orgId=1&from=now-6h&to=now&timezone=browser",
+                icon: "☸️",
+                iconColor: "icon-purple",
+                category: "monitor"
+            },
+            {
+                title: "FStress",
+                description: "FStress压力测试管理",
+                url: "https://fstress.hupu.io/dashboard",
+                icon: "⚡",
+                iconColor: "icon-yellow",
+                category: "monitor"
+            },
+            {
+                title: "CLS日志",
+                description: "CLS日志搜索平台",
+                url: "https://cls.hupu.io/cls/search",
+                icon: "📋",
+                iconColor: "icon-green",
+                category: "monitor"
+            },
+            {
+                title: "版主后台",
+                description: "版主管理后台",
+                url: "https://banzhu.hupu.com/report/post",
+                icon: "👑",
+                iconColor: "icon-orange",
+                category: "project"
+            },
+            {
+                title: "Nexus",
+                description: "Nexus Maven仓库管理",
+                url: "https://nexus.hupu.io/",
+                icon: "📦",
+                iconColor: "icon-blue",
+                category: "config"
+            },
+            {
+                title: "MSE微服务",
+                description: "阿里云MSE微服务引擎",
+                url: "https://mse.console.aliyun.com/?spm=5176.ecscore_server.console-base_product-drawer-right.dproducts-and-services-mse.7cbe4df53pl7vl#/overview",
+                icon: "🔧",
+                iconColor: "icon-cyan",
+                category: "config"
+            },
+            {
+                title: "XXL-Job SIT",
+                description: "XXL-Job分布式任务调度平台 - SIT环境",
+                url: "https://xxljob-sit.hupu.io/",
+                icon: "⏱️",
+                iconColor: "icon-purple",
+                category: "app"
+            },
+            {
+                title: "ECS主机",
+                description: "ECS主机指标监控看板",
+                url: "https://grafana.hupu.io/d/-Fzt_9JZk/ecszhu-ji-zhi-biao?orgId=1&var-Group=aipusaas-all-api&var-Host=All&from=now-6h&to=now",
+                icon: "💻",
+                iconColor: "icon-blue",
+                category: "monitor"
+            },
+            {
+                title: "腾讯CKafka",
+                description: "腾讯云CKafka实例管理",
+                url: "https://console.cloud.tencent.com/ckafka/instance-detail?rid=33&id=ckafka-ev75dd97",
+                icon: "📨",
+                iconColor: "icon-green",
+                category: "mq"
+            },
+            {
+                title: "Trace追踪",
+                description: "分布式链路追踪 - K8s环境",
+                url: "https://grafana-k8s.hupu.io/d/deiox7cco78qoe/3-trace?orgId=1&from=now-30m&to=now&timezone=browser&var-service_name=bpl-inmail-msv&var-operation=$__all&var-status=$__all&var-trace_id=0&var-datasource=bf0xca75fwtfkc",
+                icon: "🔗",
+                iconColor: "icon-orange",
+                category: "monitor"
+            },
+            {
+                title: "Jenkins",
+                description: "Jenkins持续集成与部署平台",
+                url: "https://jenkins-dev.tappal.ai/",
+                icon: "🚀",
+                iconColor: "icon-red",
+                category: "dev"
+            }
+        ];
+
+        // 当前状态
+        let currentCategory = 'all';
+        let searchKeyword = '';
+
+        // 初始化
+        function init() {
+            renderCards();
+            setupEventListeners();
+        }
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 搜索输入
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', handleSearch);
+
+            // 分类标签
+            const categoryTabs = document.querySelectorAll('.category-tab');
+            categoryTabs.forEach(tab => {
+                tab.addEventListener('click', handleCategoryChange);
+            });
+        }
+
+        // 处理搜索
+        function handleSearch(e) {
+            searchKeyword = e.target.value.toLowerCase();
+            renderCards();
+        }
+
+        // 处理分类切换
+        function handleCategoryChange(e) {
+            const clickedTab = e.target;
+            const category = clickedTab.dataset.category;
+
+            // 更新当前分类
+            currentCategory = category;
+
+            // 更新标签样式
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            clickedTab.classList.add('active');
+
+            // 重新渲染卡片
+            renderCards();
+        }
+
+        // 过滤卡片
+        function filterCards() {
+            return urlList.filter(item => {
+                // 分类过滤
+                const categoryMatch = currentCategory === 'all' || item.category === currentCategory;
+
+                // 搜索过滤
+                const searchMatch =
+                    searchKeyword === '' ||
+                    item.title.toLowerCase().includes(searchKeyword) ||
+                    item.description.toLowerCase().includes(searchKeyword) ||
+                    item.url.toLowerCase().includes(searchKeyword);
+
+                return categoryMatch && searchMatch;
+            });
+        }
+
+        // 渲染卡片
+        function renderCards() {
+            const grid = document.getElementById('cardsGrid');
+            const resultCount = document.getElementById('resultCount');
+            const filteredCards = filterCards();
+
+            // 更新结果数量
+            resultCount.textContent = `共 ${filteredCards.length} 个链接`;
+
+            // 清空网格
+            grid.innerHTML = '';
+
+            // 如果没有结果，显示空状态
+            if (filteredCards.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <span class="emoji">🔍</span>
+                        <div>没有找到匹配的链接</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // 渲染卡片
+            filteredCards.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'url-card';
+                card.innerHTML = `
+                    <div class="card-icon ${item.iconColor}">${item.icon}</div>
+                    <div class="card-title">${item.title}</div>
+                    <div class="card-description">${item.description}</div>
+                    <div class="card-url">${item.url}</div>
+                `;
+
+                // 点击跳转
+                card.addEventListener('click', () => {
+                    window.open(item.url, '_blank');
+                });
+
+                grid.appendChild(card);
+            });
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

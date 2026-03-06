@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE 测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #output {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+        .test-buttons {
+            margin: 10px 0;
+        }
+        button {
+            margin-right: 10px;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>SSE 解析测试页面</h1>
+    
+    <div class="test-buttons">
+        <button onclick="testSimpleData()">测试简单数据</button>
+        <button onclick="testMultipleLines()">测试多行数据</button>
+        <button onclick="testJsonData()">测试JSON数据</button>
+        <button onclick="clearOutput()">清空输出</button>
+    </div>
+    
+    <div id="output"></div>
+    
+    <h3>模拟的SSE数据：</h3>
+    <pre id="sse-data">data:你好
+data:！有什么
+data:我可以
+data:帮您的
+data:吗？😊</pre>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        function addToOutput(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function clearOutput() {
+            output.innerHTML = '';
+        }
+        
+        // 模拟SSE解析逻辑
+        function parseSSEMock(sseText) {
+            const lines = sseText.split('\n');
+            let accumulatedContent = '';
+            
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                
+                if (trimmedLine.startsWith('data: ')) {
+                    let data = trimmedLine.slice(6).trim(); // 移除 'data: ' 前缀并去除空白
+                    
+                    // 尝试解析 JSON 数据，如果失败则使用原始数据
+                    let actualData = data;
+                    try {
+                        const parsed = JSON.parse(data);
+                        // 如果解析成功，尝试获取实际的消息内容
+                        if (typeof parsed === 'string') {
+                            actualData = parsed;
+                        } else if (parsed.content !== undefined) {
+                            actualData = parsed.content;
+                        } else if (parsed.text !== undefined) {
+                            actualData = parsed.text;
+                        } else if (parsed.message !== undefined) {
+                            actualData = parsed.message;
+                        } else {
+                            // 如果是对象但没有预期的字段，转换为字符串
+                            actualData = data;
+                        }
+                    } catch (e) {
+                        // 如果不是有效的 JSON，使用原始数据
+                        actualData = data;
+                    }
+                    
+                    // 将数据追加到累积内容中
+                    accumulatedContent += actualData;
+                    
+                    // 模拟实时更新
+                    addToOutput('累积内容: ' + accumulatedContent);
+                }
+            }
+            
+            return accumulatedContent;
+        }
+        
+        function testSimpleData() {
+            addToOutput('--- 开始测试简单数据 ---');
+            const testData = `data:你好
+data:世界`;
+            parseSSEMock(testData);
+        }
+        
+        function testMultipleLines() {
+            addToOutput('--- 开始测试多行数据 ---');
+            const testData = `data:你好
+data:！有什么
+data:我可以
+data:帮您的
+data:吗？😊`;
+            parseSSEMock(testData);
+        }
+        
+        function testJsonData() {
+            addToOutput('--- 开始测试JSON数据 ---');
+            const testData = `data:{"text":"你好"}
+data:{"text":"！有什么"}
+data:{"text":"我可以"}
+data:{"text":"帮您的"}
+data:{"text":"吗？😊"}`;
+            parseSSEMock(testData);
+        }
+    </script>
+</body>
+</html>

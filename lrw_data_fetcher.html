@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>路人王数据获取工具</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        
+        h1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 25px 20px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .input-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: end;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        
+        label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        select {
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 16px;
+            background-color: white;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        
+        select:focus {
+            outline: 0;
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-width: 120px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .results-section {
+            padding: 30px;
+        }
+        
+        .merchant-data {
+            margin-bottom: 30px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            background: white;
+            border: 1px solid #e9ecef;
+        }
+        
+        .merchant-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .data-content {
+            padding: 20px;
+        }
+        
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .data-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .data-label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+            margin-bottom: 4px;
+            display: block;
+        }
+        
+        .data-value {
+            color: #212529;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .category-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+            font-size: 16px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #28a745;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* 表格模态框样式 */
+        .table-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .table-modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 80vh;
+            overflow: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .table-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px 10px 0 0;
+        }
+        
+        .table-modal-body {
+            padding: 20px;
+        }
+        
+        .table-modal-close {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .table-modal-close:hover {
+            background: #ff5252;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .data-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .data-table tr:hover {
+            background-color: #e9ecef;
+        }
+        
+        .table-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .table-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>路人王数据获取工具</h1>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <label for="startTime">开始时间 (yyyyMMdd):</label>
+                <input type="text" id="startTime" placeholder="例如: 20251222" maxlength="8">
+            </div>
+            
+            <div class="input-group">
+                <label for="endTime">结束时间 (yyyyMMdd):</label>
+                <input type="text" id="endTime" placeholder="例如: 20251228" maxlength="8">
+            </div>
+            
+            <button onclick="fetchData()">获取数据</button>
+        </div>
+        
+        <div id="loading" class="loading hidden">正在加载数据...</div>
+        <div id="error" class="error hidden"></div>
+        <div id="success" class="success hidden"></div>
+        
+        <div class="results-section">
+            <div id="merchant21Data" class="merchant-data hidden">
+                <div class="merchant-header">商户ID: 21</div>
+                <div class="data-content">
+                    <div id="overview21"></div>
+                    <div id="category21" class="category-section"></div>
+                                        <div style="margin-top: 15px;">
+                                            <button onclick="showTableModal(21, '路人王')" class="table-btn">表格视图</button>
+                                        </div>
+                </div>
+            </div>
+            
+            <div id="merchant42Data" class="merchant-data hidden">
+                <div class="merchant-header">商户ID: 42</div>
+                <div class="data-content">
+                    <div id="overview42"></div>
+                    <div id="category42" class="category-section"></div>
+                                        <div style="margin-top: 15px;">
+                                            <button onclick="showTableModal(42, '1One')" class="table-btn">表格视图</button>
+                                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchData() {
+            // 获取输入值
+            const startTime = document.getElementById('startTime').value.trim();
+            const endTime = document.getElementById('endTime').value.trim();
+            
+            // 验证输入
+            if (!startTime || !endTime) {
+                showError('请填写开始时间和结束时间');
+                return;
+            }
+            
+            // 验证日期格式 (yyyyMMdd, 8位数字)
+            const dateRegex = /^\d{8}$/;
+            if (!dateRegex.test(startTime) || !dateRegex.test(endTime)) {
+                showError('日期格式不正确，请使用yyyyMMdd格式，例如: 20251222');
+                return;
+            }
+            
+            // 验证日期逻辑 (可选，可以添加更详细的日期验证)
+            if (startTime > endTime) {
+                showError('开始时间不能晚于结束时间');
+                return;
+            }
+            
+            // 显示加载状态
+            showLoading(true);
+            hideError();
+            hideSuccess();
+            
+            try {
+                // 并行调用API
+                const [overview21, category21, overview42, category42, categoryCount21, categoryCount42, aiSolveRate21, aiSolveRate42] = await Promise.all([
+                    fetchOverviewData(21, startTime, endTime),
+                    fetchCategoryData(21, startTime, endTime),
+                    fetchOverviewData(42, startTime, endTime),
+                    fetchCategoryData(42, startTime, endTime),
+                    fetchCategoryCountData(21, startTime, endTime),
+                    fetchCategoryCountData(42, startTime, endTime),
+                    fetchAiSolveRateData(21, startTime, endTime),
+                    fetchAiSolveRateData(42, startTime, endTime)
+                ]);
+                
+                // 保存分类数据到全局变量，用于表格显示
+                window.categoryData21 = category21;
+                window.categoryData42 = category42;
+                window.categoryCountData21 = categoryCount21;
+                window.categoryCountData42 = categoryCount42;
+                window.aiSolveRateData21 = aiSolveRate21;
+                window.aiSolveRateData42 = aiSolveRate42;
+                
+                // 显示数据
+                displayData(21, overview21, category21, categoryCount21, aiSolveRate21, '路人王');
+                displayData(42, overview42, category42, categoryCount42, aiSolveRate42, '1One');
+                
+                showSuccess('数据获取成功！');
+            } catch (error) {
+                console.error('获取数据时出错:', error);
+                showError('获取数据失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function fetchOverviewData(merchantId, startTime, endTime) {
+            const url = `https://aipu-stg.hupu.com/aipusaasapi/test/overview?merchantId=${encodeURIComponent(merchantId)}&startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`;
+            
+            const response = await fetch(url);
+            console.log('概览数据请求URL:', url);
+            console.log('概览数据响应状态:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('概览数据请求失败:', errorText);
+                throw new Error(`获取商户${merchantId}概览数据失败: ${response.status} ${response.statusText} - ${errorText}`);
+            }
+            
+            const json = await response.json();
+            console.log('概览数据响应:', json);
+            return json.result; // 从result字段中提取数据
+        }
+        
+        async function fetchCategoryData(merchantId, startTime, endTime) {
+            const url = `https://aipu-stg.hupu.com/aipusaasapi/test/session/category?merchantId=${encodeURIComponent(merchantId)}&startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`;
+            
+            const response = await fetch(url);
+            console.log('分类数据请求URL:', url);
+            console.log('分类数据响应状态:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('分类数据请求失败:', errorText);
+                throw new Error(`获取商户${merchantId}分类数据失败: ${response.status} ${response.statusText} - ${errorText}`);
+            }
+            
+            const json = await response.json();
+            console.log('分类数据响应:', json);
+            return json.result; // 从result字段中提取数据
+        }
+        
+        async function fetchCategoryCountData(merchantId, startTime, endTime) {
+            const url = `https://aipusaas-all-msv-stg.hupu.io/stats/fetchCategoryCount?merchantId=${encodeURIComponent(merchantId)}&startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`;
+            
+            const response = await fetch(url);
+            console.log('分类数量数据请求URL:', url);
+            console.log('分类数量数据响应状态:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('分类数量数据请求失败:', errorText);
+                throw new Error(`获取商户${merchantId}分类数量数据失败: ${response.status} ${response.statusText} - ${errorText}`);
+            }
+            
+            const json = await response.json();
+            console.log('分类数量数据响应:', json);
+            return json.result; // 从result字段中提取数据
+        }
+        
+        // 辅助函数：将yyyyMMdd格式转换为yyyy-MM-dd HH:mm:ss格式
+        function convertDateFormat(dateStr) {
+            if (!dateStr || dateStr.length !== 8) {
+                return dateStr;
+            }
+            
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
+            
+            return `${year}-${month}-${day} 00:00:00`;
+        }
+        
+        // 辅助函数：计算后一天的日期
+        function getNextDay(dateStr) {
+            if (!dateStr || dateStr.length !== 8) {
+                return dateStr;
+            }
+            
+            const year = parseInt(dateStr.substring(0, 4));
+            const month = parseInt(dateStr.substring(4, 6)) - 1; // JavaScript月份从0开始
+            const day = parseInt(dateStr.substring(6, 8));
+            
+            // 创建日期对象（注意月份需要减1）
+            const date = new Date(year, month, day);
+            
+            // 添加一天
+            date.setDate(date.getDate() + 1);
+            
+            // 格式化为yyyyMMdd
+            const nextYear = date.getFullYear();
+            const nextMonth = String(date.getMonth() + 1).padStart(2, '0');
+            const nextDay = String(date.getDate()).padStart(2, '0');
+            
+            return `${nextYear}${nextMonth}${nextDay}`;
+        }
+        
+        async function fetchAiSolveRateData(merchantId, startTime, endTime) {
+            // 转换时间格式，结束时间使用后一天
+            const formattedStartTime = convertDateFormat(startTime);
+            const nextDay = getNextDay(endTime);
+            const formattedEndTime = convertDateFormat(nextDay);
+            
+            const url = `http://aipusaas-all-msv-stg.hupu.io/session/getAiSolveRate?merchantId=${encodeURIComponent(merchantId)}&startTime=${encodeURIComponent(formattedStartTime)}&endTime=${encodeURIComponent(formattedEndTime)}`;
+            
+            const response = await fetch(url);
+            console.log('AI解决率数据请求URL:', url);
+            console.log('AI解决率数据响应状态:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('AI解决率数据请求失败:', errorText);
+                throw new Error(`获取商户${merchantId}AI解决率数据失败: ${response.status} ${response.statusText} - ${errorText}`);
+            }
+            
+            const json = await response.json();
+            console.log('AI解决率数据响应:', json);
+            // 检查是否有result字段，如果有则返回result，否则返回整个响应
+            return json.result !== undefined ? json.result : json;
+        }
+        
+        function displayData(merchantId, overviewData, categoryData, categoryCountData, aiSolveRateData, merchantName) {
+            const container = document.getElementById(`merchant${merchantId}Data`);
+            const overviewDiv = document.getElementById(`overview${merchantId}`);
+            const categoryDiv = document.getElementById(`category${merchantId}`);
+            
+            // 计算基于分类数量的会话总数
+            let calculatedTotalSessions = 0;
+            if (categoryCountData && typeof categoryCountData === 'object') {
+                for (const [key, value] of Object.entries(categoryCountData)) {
+                    if (value && value.sessionCount !== undefined && value.sessionCount !== null) {
+                        calculatedTotalSessions += Number(value.sessionCount);
+                    }
+                }
+            }
+            
+            // 使用新的AI解决率数据覆盖原数据
+            let updatedOverviewData = {...overviewData};
+            if (aiSolveRateData !== undefined && aiSolveRateData !== null) {
+                // 处理可能的响应格式变化
+                if (typeof aiSolveRateData === 'number') {
+                    // 如果返回的是纯数字，直接使用
+                    updatedOverviewData.aiResolutionRate = aiSolveRateData;
+                } else if (typeof aiSolveRateData === 'object') {
+                    // 如果返回对象，尝试多种可能的字段名
+                    if (aiSolveRateData.aiResolutionRate !== undefined) {
+                        // 优先使用aiResolutionRate字段
+                        updatedOverviewData.aiResolutionRate = aiSolveRateData.aiResolutionRate;
+                    } else {
+                        // 尝试其他可能的字段名
+                        const rateKeys = ['rate', 'aiSolveRate', 'solveRate', 'aiRate', 'aiSolve', 'ai_resolution_rate', 'ai_solve_rate'];
+                        for (const key of rateKeys) {
+                            if (aiSolveRateData[key] !== undefined) {
+                                updatedOverviewData.aiResolutionRate = aiSolveRateData[key];
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 显示概览数据
+            overviewDiv.innerHTML = `
+                <div class="data-grid">
+                    <div class="data-item">
+                        <span class="data-label">总会话数</span>
+                        <span class="data-value">${typeof calculatedTotalSessions === 'number' ? calculatedTotalSessions : updatedOverviewData.totalSession || 'N/A'}</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">AI解决率</span>
+                        <span class="data-value">${updatedOverviewData.aiResolutionRate || 'N/A'}%</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">转人工率</span>
+                        <span class="data-value">${updatedOverviewData.transferToHumanRate || 'N/A'}%</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">数量趋势</span>
+                        <span class="data-value">${updatedOverviewData.countTrend || 'N/A'}</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">AI解决率趋势</span>
+                        <span class="data-value">${updatedOverviewData.aiResolutionRateTrend || 'N/A'}</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">转人工率趋势</span>
+                        <span class="data-value">${updatedOverviewData.transferToHumanRateTrend || 'N/A'}</span>
+                    </div>
+                </div>
+            `;
+            
+            // 显示分类数据
+            if (categoryData && typeof categoryData === 'object' && categoryCountData && typeof categoryCountData === 'object') {
+                // 将分类数据转换为数组并按值（百分比）倒序排序
+                const sortedCategories = Object.entries(categoryData)
+                    .map(([key, value]) => ({ key, percentage: value, count: categoryCountData[key] ? categoryCountData[key].sessionCount : 0 }))
+                    .sort((a, b) => {
+                        const aNum = parseFloat(a.percentage);
+                        const bNum = parseFloat(b.percentage);
+                        // 如果值不是数字，则将它们放在后面
+                        if (isNaN(aNum) && isNaN(bNum)) return 0;
+                        if (isNaN(aNum)) return 1;
+                        if (isNaN(bNum)) return -1;
+                        // 按数值倒序排列
+                        return bNum - aNum;
+                    });
+                
+                let categoryHtml = '<h3 style="margin-top: 0; color: #495057;">会话分类</h3><div class="category-grid">';
+                for (const { key, percentage, count } of sortedCategories) {
+                    // 检查值是否为数字，如果是则添加百分号
+                    let displayPercentage = percentage;
+                    if (!isNaN(parseFloat(percentage)) && isFinite(percentage)) {
+                        displayPercentage = percentage + '%';
+                    }
+                    categoryHtml += `
+                        <div class="data-item">
+                            <span class="data-label">${key}</span>
+                            <span class="data-value">${count} (${displayPercentage})</span>
+                        </div>
+                    `;
+                }
+                categoryHtml += '</div>';
+                categoryDiv.innerHTML = categoryHtml;
+            } else {
+                categoryDiv.innerHTML = '<h3 style="margin-top: 0; color: #495057;">会话分类</h3><div class="data-item"><span class="data-value">暂无分类数据</span></div>';
+            }
+            
+            // 更新商户标题
+            const header = container.querySelector('.merchant-header');
+            if (header) {
+                header.textContent = `${merchantName} (商户ID: ${merchantId})`;
+            }
+            
+            // 显示容器
+            container.classList.remove('hidden');
+        }
+        
+        function showLoading(show) {
+            const loadingDiv = document.getElementById('loading');
+            if (show) {
+                loadingDiv.classList.remove('hidden');
+            } else {
+                loadingDiv.classList.add('hidden');
+            }
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+        
+        function hideError() {
+            const errorDiv = document.getElementById('error');
+            errorDiv.classList.add('hidden');
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.classList.remove('hidden');
+        }
+        
+        function hideSuccess() {
+            const successDiv = document.getElementById('success');
+            successDiv.classList.add('hidden');
+        }
+        
+        // 添加回车键支持
+        document.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                fetchData();
+            }
+        });
+        
+        // 显示表格模态框
+        function showTableModal(merchantId, merchantName) {
+            // 防止在页面加载时意外调用
+            if (!merchantId || !merchantName) {
+                console.error('showTableModal: 缺少必要参数');
+                return;
+            }
+            // 获取对应的分类数据
+            let categoryData;
+            let categoryCountData;
+            if (merchantId === 21) {
+                // 需要从全局变量或存储中获取原始分类数据
+                categoryData = window.categoryData21 || {};
+                categoryCountData = window.categoryCountData21 || {};
+            } else if (merchantId === 42) {
+                categoryData = window.categoryData42 || {};
+                categoryCountData = window.categoryCountData42 || {};
+            }
+            
+            // 更新模态框标题
+            document.getElementById('modalTitle').textContent = `${merchantName} (商户ID: ${merchantId}) - 分类数据表格`;
+            
+            // 生成表格HTML
+            let tableHtml = '<table class="data-table">';
+            tableHtml += '<thead><tr><th>分类</th><th>数量</th><th>百分比</th></tr></thead><tbody>';
+            
+            if (categoryData && typeof categoryData === 'object' && categoryCountData && typeof categoryCountData === 'object') {
+                // 将分类数据转换为数组并按值（百分比）倒序排序
+                const sortedCategories = Object.entries(categoryData)
+                    .map(([key, value]) => ({ key, percentage: value, count: categoryCountData[key] ? categoryCountData[key].sessionCount : 0 }))
+                    .sort((a, b) => {
+                        const aNum = parseFloat(a.percentage);
+                        const bNum = parseFloat(b.percentage);
+                        // 如果值不是数字，则将它们放在后面
+                        if (isNaN(aNum) && isNaN(bNum)) return 0;
+                        if (isNaN(aNum)) return 1;
+                        if (isNaN(bNum)) return -1;
+                        // 按数值倒序排列
+                        return bNum - aNum;
+                    });
+                
+                for (const { key, percentage, count } of sortedCategories) {
+                    // 检查值是否为数字，如果是则添加百分号
+                    let displayPercentage = 'N/A';
+                    if (!isNaN(parseFloat(percentage)) && isFinite(percentage)) {
+                        displayPercentage = percentage + '%';
+                    } else {
+                        // 如果原始值不是数字，尝试解析为百分比
+                        const stringValue = String(percentage);
+                        if (stringValue.includes('%')) {
+                            displayPercentage = stringValue;
+                        } else {
+                            displayPercentage = 'N/A';
+                        }
+                    }
+                    
+                    tableHtml += `<tr><td>${key}</td><td>${count}</td><td>${displayPercentage}</td></tr>`;
+                }
+            } else {
+                tableHtml += '<tr><td colspan="3">暂无分类数据</td></tr>';
+            }
+            
+            tableHtml += '</tbody></table>';
+            
+            // 将表格HTML插入到容器中
+            document.getElementById('tableContainer').innerHTML = tableHtml;
+            
+            // 显示模态框
+            const modal = document.getElementById('tableModal');
+            modal.classList.remove('hidden');
+            // 重置display样式以确保模态框显示
+            modal.style.display = 'flex';
+            
+            // 阻止背景滚动
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // 关闭表格模态框
+        function closeTableModal() {
+            const modal = document.getElementById('tableModal');
+            modal.classList.add('hidden');
+            // 重置display样式以确保模态框正确隐藏
+            modal.style.display = 'none';
+            
+            // 恢复背景滚动
+            document.body.style.overflow = 'auto';
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 确保模态框初始状态为隐藏
+            const modal = document.getElementById('tableModal');
+            if (modal) {
+                // 强制设置模态框为隐藏状态
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+            }
+            
+            // 点击模态框背景关闭
+            if (modal) {
+                modal.addEventListener('click', function(event) {
+                    if (event.target === this) {
+                        closeTableModal();
+                    }
+                });
+            }
+        });
+        // 确保页面加载时模态框是隐藏的
+        window.addEventListener('load', function() {
+            const modal = document.getElementById('tableModal');
+            if (modal) {
+                // 强制隐藏模态框
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+            }
+        });
+    </script>
+    
+    <!-- 表格模态框 -->
+    <div id="tableModal" class="table-modal hidden">
+        <div class="table-modal-content">
+            <div class="table-modal-header">
+                <h2 id="modalTitle">分类数据表格</h2>
+                <button class="table-modal-close" onclick="closeTableModal()">×</button>
+            </div>
+            <div class="table-modal-body">
+                <div id="tableContainer">
+                    <!-- 表格内容将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

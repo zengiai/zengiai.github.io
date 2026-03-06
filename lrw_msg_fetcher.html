@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>路人王消息明细查询</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        .results {
+            margin-top: 20px;
+        }
+        
+        .session {
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .session-header {
+            background-color: #f8f9fa;
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .session-content {
+            padding: 10px;
+        }
+        
+        .message {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+            position: relative;
+        }
+        
+        .message:last-child {
+            border-bottom: none;
+        }
+        
+        .message-info {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .message-type-label {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        .label-user {
+            background-color: #2196f3;
+            color: white;
+        }
+        
+        .label-service {
+            background-color: #9c27b0;
+            color: white;
+        }
+        
+        .message-session-id {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+            font-weight: normal;
+        }
+        
+        .message-content {
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+        }
+        
+        .message-extend-info {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            font-style: italic;
+            opacity: 0.7;
+        }
+        
+        .message-pictures {
+            margin-top: 10px;
+        }
+        
+        .picture-item {
+            display: inline-block;
+            margin: 5px;
+            max-width: 150px;
+            max-height: 150px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .picture-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: pointer;
+        }
+        
+        /* 图片放大模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+        
+        .modal-content {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            max-height: 80%;
+            margin-top: 5%;
+        }
+        
+        .modal-content {
+            animation-name: zoom;
+            animation-duration: 0.3s;
+        }
+        
+        @keyframes zoom {
+            from {transform: scale(0);}
+            to {transform: scale(1);}
+        }
+        
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .error {
+            color: red;
+            padding: 10px;
+            background-color: #ffe6e6;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>路人王消息明细查询</h1>
+        
+        <div class="form-group">
+            <label for="merchantSelect">选择商户:</label>
+            <select id="merchantSelect">
+                <option value="21">路人王 (21)</option>
+                <option value="42">1One (42)</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="startTime">开始时间:</label>
+            <input type="datetime-local" id="startTime" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="endTime">结束时间:</label>
+            <input type="datetime-local" id="endTime" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="sessionId">会话ID (可选):</label>
+            <input type="text" id="sessionId" placeholder="输入会话ID">
+        </div>
+        
+        <div class="form-group">
+            <label for="openUid">OpenUid (可选):</label>
+            <input type="text" id="openUid" placeholder="输入OpenUid">
+        </div>
+        
+        <button onclick="fetchMessages()">查询消息</button>
+        
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="results" class="results"></div>
+    </div>
+    
+    <!-- 图片放大模态框 -->
+    <div id="imageModal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script>
+        // 设置默认时间为当前时间前一小时和当前时间
+        const now = new Date();
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+        
+        document.getElementById('startTime').value = formatDateForDateTimeLocal(oneHourAgo);
+        document.getElementById('endTime').value = formatDateForDateTimeLocal(now);
+        
+        function formatDateForDateTimeLocal(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        
+        async function fetchMessages() {
+            const merchantId = document.getElementById('merchantSelect').value;
+            const startTimeInput = document.getElementById('startTime').value;
+            const endTimeInput = document.getElementById('endTime').value;
+            const sessionId = document.getElementById('sessionId').value;
+            const openUid = document.getElementById('openUid').value;
+            
+            if (!startTimeInput || !endTimeInput) {
+                showError('请选择开始时间和结束时间');
+                return;
+            }
+            
+            // 将datetime-local格式转换为yyyyMMdd hhMMss格式
+            const startTime = convertDateTimeFormat(startTimeInput);
+            const endTime = convertDateTimeFormat(endTimeInput);
+            
+            showLoading(true);
+            hideError();
+            
+            try {
+                let url = `https://aipu-stg.hupu.com/aipusaasapi/test/selectMessageDetail?merchantId=${encodeURIComponent(merchantId)}&startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`;
+                
+                if (sessionId) {
+                    url += `&sessionId=${encodeURIComponent(sessionId)}`;
+                }
+                
+                if (openUid) {
+                    url += `&openUid=${encodeURIComponent(openUid)}`;
+                }
+                
+                const response = await fetch(url);
+                
+                console.log('Raw response:', response); // 根据用户偏好打印原始响应
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Response data:', data); // 根据用户偏好打印原始响应
+                
+                // 提取result字段
+                const messages = data.result || [];
+                
+                displayMessages(messages);
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+                showError(`查询失败: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function convertDateTimeFormat(dateTimeStr) {
+            // 将 'YYYY-MM-DDTHH:mm' 格式转换为 'YYYY-MM-DD HH:mm:ss' 格式
+            const date = new Date(dateTimeStr);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = '00'; // 设置为00秒
+            
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+        
+        function displayMessages(messages) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!messages || messages.length === 0) {
+                resultsDiv.innerHTML = '<p>没有找到消息数据</p>';
+                return;
+            }
+            
+            // 按sessionId分组
+            const groupedMessages = {};
+            messages.forEach(message => {
+                const sessionId = message.sessionId;
+                if (!groupedMessages[sessionId]) {
+                    groupedMessages[sessionId] = [];
+                }
+                groupedMessages[sessionId].push(message);
+            });
+            
+            // 对每组内的消息按id正序排列
+            Object.keys(groupedMessages).forEach(sessionId => {
+                groupedMessages[sessionId].sort((a, b) => {
+                    // 如果id为null，将其视为最小值
+                    const aId = a.id !== null && a.id !== undefined ? a.id : -Infinity;
+                    const bId = b.id !== null && b.id !== undefined ? b.id : -Infinity;
+                    return aId - bId;
+                });
+            });
+            
+            // 生成HTML
+            let html = '';
+            Object.keys(groupedMessages).forEach(sessionId => {
+                const sessionMessages = groupedMessages[sessionId];
+                const firstMessage = sessionMessages[0];
+                
+                html += `
+                <div class="session">
+                    <div class="session-header" onclick="toggleSession(this)">
+                        会话 ID: ${sessionId} | 用户ID: ${firstMessage.senderId || 'N/A'} | 客服ID: ${firstMessage.replierId || 'N/A'}
+                    </div>
+                    <div class="session-content" style="display: none;">
+                `;
+                
+                sessionMessages.forEach(message => {
+                    // 检查pictures字段是否不为空且不为空数组
+                    const hasPictures = message.pictures && Array.isArray(message.pictures) && message.pictures.length > 0;
+                    
+                    // 根据senderId和replierId判断消息类型
+                    let messageType = '';
+                    let messageClass = '';
+                    let typeLabel = '';
+
+                    if (message.senderId != null) {
+                        messageType = 'user';
+                        messageClass = '';
+                        typeLabel = '<span class="message-type-label label-user">用户</span>';
+                    } else if (message.replierId != null) {
+                        messageType = 'service';
+                        messageClass = '';
+                        typeLabel = '<span class="message-type-label label-service">客服</span>';
+                    } else {
+                        // 如果两者都为null，保持默认样式
+                        messageClass = '';
+                        typeLabel = '';
+                    }
+                    
+                    html += `
+                        <div class="message ${messageClass}">
+                            <div class="message-info">
+                                ${typeLabel}发送时间: ${message.createDt} | 用户ID: ${message.senderId || 'N/A'} | 客服ID: ${message.replierId || 'N/A'} | 消息类型: ${message.type || 'N/A'}
+                            </div>
+                            <div class="message-session-id">会话ID: ${message.sessionId}</div>
+                            <div class="message-content">${message.content ? message.content.replace(/\n/g, '<br>') : 'N/A'}</div>
+                            ${hasPictures ? `<div class="message-pictures">${message.pictures.map(pic => `<div class="picture-item"><img src="${pic}" alt="消息图片" onclick="openModal(this.src)" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" fill="%23f0f0f0"/><text x="50%" y="50%" font-family="Arial" font-size="14" fill="%23999" text-anchor="middle">图片加载失败</text></svg>'"/></div>`).join('')}</div>` : ''}
+                            ${message.extendInfo ? `<div class="message-extend-info">额外信息: ${JSON.stringify(message.extendInfo)}</div>` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += '</div></div>';
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function toggleSession(header) {
+            const content = header.nextElementSibling;
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+            } else {
+                content.style.display = 'none';
+            }
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+        
+        function openModal(imageSrc) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            
+            modal.style.display = 'block';
+            modalImg.src = imageSrc;
+        }
+        
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+        }
+        
+        // 点击模态框外部区域关闭模态框
+        window.onclick = function(event) {
+            const modal = document.getElementById('imageModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

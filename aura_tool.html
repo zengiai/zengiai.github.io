@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura 工具</title>
+    <link rel="stylesheet" href="aura_tool/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Aura 工具</h1>
+        </div>
+        <div class="env-panel">
+            <span class="env-label">环境</span>
+            <div class="env-switch" role="radiogroup" aria-label="环境选择">
+                <input type="radio" name="env" id="env-sit" value="sit">
+                <label for="env-sit">SIT</label>
+                <input type="radio" name="env" id="env-stg" value="stg">
+                <label for="env-stg">STG</label>
+                <span class="env-indicator"></span>
+            </div>
+        </div>
+
+        <div class="module-nav">
+            <div class="module-card active" data-module="message">
+                <div class="module-title">消息查询</div>
+                <div class="module-desc">按商户与时间区间查询消息明细</div>
+            </div>
+            <div class="module-card" data-module="persona">
+                <div class="module-title">人设查询</div>
+                <div class="module-desc">查询商户AI助手人设配置</div>
+            </div>
+            <div class="module-card" data-module="merchant">
+                <div class="module-title">店铺数据信息查询</div>
+                <div class="module-desc">查询商户店铺与平台信息</div>
+            </div>
+        </div>
+
+        <!-- 消息查询表单 -->
+        <div id="messageForm" class="module-form">
+        <div class="form-group">
+            <label for="merchantInput">选择商户:</label>
+            <div class="merchant-picker">
+                <input type="text" id="merchantInput" placeholder="输入商户名称搜索..." autocomplete="off">
+                <input type="hidden" id="merchantId">
+                <div id="merchantDropdown" class="dropdown" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="startTime">开始时间:</label>
+            <input type="datetime-local" id="startTime" required>
+        </div>
+
+        <div class="form-group">
+            <label for="endTime">结束时间:</label>
+            <input type="datetime-local" id="endTime" required>
+            <div class="hint">时间跨度最长 7 天</div>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email (可选):</label>
+            <input type="text" id="email" placeholder="输入邮箱">
+        </div>
+
+        <button onclick="fetchMessages()">查询消息</button>
+        </div>
+
+        <!-- 人设查询表单 -->
+        <div id="personaForm" class="module-form" style="display: none;">
+        <div class="form-group">
+            <label for="personaMerchantInput">选择商户:</label>
+            <div class="merchant-picker">
+                <input type="text" id="personaMerchantInput" placeholder="输入商户名称搜索..." autocomplete="off">
+                <input type="hidden" id="personaMerchantId">
+                <div id="personaMerchantDropdown" class="dropdown" style="display: none;"></div>
+            </div>
+        </div>
+
+        <button onclick="fetchPersona()">查询人设</button>
+        </div>
+
+        <!-- 店铺数据信息查询表单 -->
+        <div id="merchantInfoForm" class="module-form" style="display: none;">
+        <div class="form-group">
+            <label for="merchantInfoInput">选择商户:</label>
+            <div class="merchant-picker">
+                <input type="text" id="merchantInfoInput" placeholder="输入商户名称搜索..." autocomplete="off">
+                <input type="hidden" id="merchantInfoMerchantId">
+                <div id="merchantInfoDropdown" class="dropdown" style="display: none;"></div>
+            </div>
+        </div>
+
+        <button onclick="fetchMerchantInfo()">查询店铺信息</button>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <div id="imageModal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <!-- 悬浮窗口遮罩层 -->
+    <div id="popoverOverlay" class="popover-overlay"></div>
+
+    <!-- 用户信息悬浮窗口 -->
+    <div id="userInfoPopover" class="user-info-popover">
+        <div class="popover-header">
+            <span class="popover-title">用户信息</span>
+            <button class="popover-close" onclick="closeUserInfoPopover()">&times;</button>
+        </div>
+        <div class="popover-content" id="popoverContent">
+            <div class="popover-loading">加载中...</div>
+        </div>
+    </div>
+
+    <script src="aura_tool/js/main.js"></script>
+</body>
+</html>

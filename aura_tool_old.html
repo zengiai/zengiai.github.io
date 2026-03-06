@@ -1,0 +1,2417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura 工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 6px;
+        }
+
+        .env-panel {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .env-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .env-switch {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: center;
+            background: #eef1f5;
+            border: 1px solid #d0d7de;
+            border-radius: 999px;
+            padding: 3px;
+            min-width: 120px;
+            height: 30px;
+            box-sizing: border-box;
+        }
+
+        .env-switch input {
+            display: none;
+        }
+
+        .env-switch label {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+            line-height: 24px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .env-switch .env-indicator {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: calc(50% - 3px);
+            height: 24px;
+            background: #007bff;
+            border-radius: 999px;
+            transition: transform 0.2s ease;
+            z-index: 1;
+        }
+
+        .env-switch input:checked + label {
+            color: #fff;
+        }
+
+        .env-switch input#env-stg:checked ~ .env-indicator {
+            transform: translateX(100%);
+        }
+
+        .module-nav {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .module-card {
+            flex: 1;
+            min-width: 220px;
+            padding: 12px 14px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            background-color: #fafafa;
+        }
+
+        .module-card.active {
+            border-color: #007bff;
+            background-color: #eef5ff;
+        }
+
+        .module-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .module-desc {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .session {
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .session-header {
+            background-color: #f8f9fa;
+            padding: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .session-title {
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .session-content {
+            padding: 10px;
+        }
+
+        .message {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+            position: relative;
+        }
+
+        .message:last-child {
+            border-bottom: none;
+        }
+
+        .message-info {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .message-type-label {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .label-user {
+            background-color: #2196f3;
+            color: white;
+        }
+
+        .label-service {
+            background-color: #9c27b0;
+            color: white;
+        }
+
+        .message-session-id {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+            font-weight: normal;
+        }
+
+        .message-content {
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+        }
+
+        .message-extend-info {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            font-style: italic;
+            opacity: 0.7;
+        }
+
+        .message-pictures {
+            margin-top: 10px;
+        }
+
+        .picture-item {
+            display: inline-block;
+            margin: 5px;
+            max-width: 150px;
+            max-height: 150px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .picture-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: pointer;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            max-height: 80%;
+            margin-top: 5%;
+        }
+
+        .modal-content {
+            animation-name: zoom;
+            animation-duration: 0.3s;
+        }
+
+        @keyframes zoom {
+            from {transform: scale(0);} 
+            to {transform: scale(1);} 
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            border: 3px solid #007bff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        button.loading-btn {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        button.loading-btn::after {
+            content: '';
+            position: absolute;
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-left: 8px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+        }
+
+        .error {
+            color: red;
+            padding: 10px;
+            background-color: #ffe6e6;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .merchant-picker {
+            position: relative;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .merchant-picker input[type="text"] {
+            flex: 1;
+        }
+
+        .clear-btn {
+            background-color: #6c757d;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+
+        .clear-btn:hover {
+            background-color: #5a6268;
+        }
+
+        .dropdown {
+            position: absolute;
+            top: 40px;
+            left: 0;
+            right: 80px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+            max-height: 240px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .dropdown-item {
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f0f6ff;
+        }
+
+        .dropdown-empty {
+            padding: 8px 10px;
+            color: #999;
+            font-size: 13px;
+        }
+
+        .json-result {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .json-result-header {
+            background-color: #e9ecef;
+            padding: 10px 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .json-result-content {
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .json-key {
+            color: #0066cc;
+        }
+
+        .json-string {
+            color: #22863a;
+        }
+
+        .json-number {
+            color: #b08800;
+        }
+
+        .json-boolean {
+            color: #cb2431;
+        }
+
+        .json-null {
+            color: #6f42c1;
+        }
+
+        .info-card {
+            margin-top: 15px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .info-card-header {
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            font-weight: bold;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .info-card-body {
+            padding: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            width: 180px;
+            font-weight: bold;
+            color: #555;
+            flex-shrink: 0;
+        }
+
+        .info-value {
+            flex: 1;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background-color: #28a745;
+            font-size: 12px;
+            padding: 4px 10px;
+            margin-left: 10px;
+        }
+
+        .copy-btn:hover {
+            background-color: #218838;
+        }
+
+        /* 会话用户信息查询按钮 */
+        .session-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .user-info-btn {
+            background-color: #17a2b8;
+            font-size: 12px;
+            padding: 4px 10px;
+        }
+
+        .user-info-btn:hover {
+            background-color: #138496;
+        }
+
+        /* 悬浮窗口样式 */
+        .popover-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 998;
+            display: none;
+        }
+
+        .popover-overlay.active {
+            display: block;
+        }
+
+        .user-info-popover {
+            position: absolute;
+            width: 360px;
+            max-width: 90vw;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            z-index: 999;
+            display: none;
+            transform-origin: top left;
+            animation: popoverGrow 0.2s ease-out;
+        }
+
+        .user-info-popover.active {
+            display: block;
+        }
+
+        @keyframes popoverGrow {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) translateY(-10px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .popover-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e5e5;
+            background: #f8f9fa;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .popover-title {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .popover-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .popover-close:hover {
+            color: #333;
+        }
+
+        .popover-content {
+            padding: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .popover-loading {
+            text-align: center;
+            padding: 20px;
+            color: #007bff;
+        }
+
+        .popover-error {
+            text-align: center;
+            padding: 20px;
+            color: #dc3545;
+        }
+
+        .user-info-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        .user-info-item {
+            display: flex;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .user-info-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-info-item-label {
+            width: 120px;
+            font-weight: bold;
+            color: #555;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .user-info-item-value {
+            flex: 1;
+            font-size: 13px;
+            word-break: break-all;
+            color: #333;
+        }
+
+        /* 会话详情样式 */
+        .session-detail-container {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e5e5e5;
+            padding: 12px 15px;
+        }
+
+        .session-detail-info {
+            display: grid;
+            gap: 6px;
+        }
+
+        .session-detail-row {
+            display: flex;
+            align-items: flex-start;
+            font-size: 13px;
+        }
+
+        .session-detail-label {
+            min-width: 80px;
+            font-weight: bold;
+            color: #555;
+            flex-shrink: 0;
+        }
+
+        .session-detail-value {
+            flex: 1;
+            color: #333;
+            word-break: break-all;
+        }
+
+        /* 商户设置样式 - 滑块开关 */
+        .setting-switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .setting-switch-container:last-child {
+            border-bottom: none;
+        }
+
+        .setting-switch-label {
+            font-weight: bold;
+            color: #555;
+            min-width: 150px;
+            flex-shrink: 0;
+        }
+
+        .setting-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .setting-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .setting-slider {
+            position: absolute;
+            cursor: not-allowed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 26px;
+        }
+
+        .setting-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        .setting-switch input:checked + .setting-slider {
+            background-color: #28a745;
+        }
+
+        .setting-switch input:checked + .setting-slider:before {
+            transform: translateX(24px);
+        }
+
+        .setting-status {
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .setting-status.on {
+            color: #28a745;
+        }
+
+        .setting-status.off {
+            color: #dc3545;
+        }
+
+        /* 折扣码样式 */
+        .discount-card {
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+
+        .discount-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .discount-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .discount-header:hover {
+            background-color: #f8f9fa;
+        }
+
+        .discount-title-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .discount-badge {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .discount-badge.percentage {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .discount-badge.fixed_amount {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .discount-badge.free_shipping {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .discount-badge.unknown {
+            background: linear-gradient(135deg, #9ea7b3 0%, #707b86 100%);
+        }
+
+        .discount-code {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .discount-name {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .discount-toggle {
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #999;
+            cursor: pointer;
+            padding: 4px 8px;
+            transition: transform 0.3s;
+        }
+
+        .discount-toggle.expanded {
+            transform: rotate(180deg);
+        }
+
+        .discount-details {
+            padding: 15px;
+            background-color: #f8f9fa;
+            display: none;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .discount-details.active {
+            display: block;
+        }
+
+        .discount-detail-row {
+            display: flex;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .discount-detail-label {
+            min-width: 100px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .discount-detail-value {
+            flex: 1;
+            color: #333;
+        }
+
+        .discount-status-active {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .discount-status-expired {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .discount-status-disabled {
+            color: #6c757d;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Aura 工具</h1>
+        </div>
+        <div class="env-panel">
+            <span class="env-label">环境</span>
+            <div class="env-switch" role="radiogroup" aria-label="环境选择">
+                <input type="radio" name="env" id="env-sit" value="sit">
+                <label for="env-sit">SIT</label>
+                <input type="radio" name="env" id="env-stg" value="stg">
+                <label for="env-stg">STG</label>
+                <span class="env-indicator"></span>
+            </div>
+        </div>
+
+        <div class="module-nav">
+            <div class="module-card active" data-module="message">
+                <div class="module-title">消息查询</div>
+                <div class="module-desc">按商户与时间区间查询消息明细</div>
+            </div>
+            <div class="module-card" data-module="persona">
+                <div class="module-title">人设查询</div>
+                <div class="module-desc">查询商户AI助手人设配置</div>
+            </div>
+            <div class="module-card" data-module="merchant">
+                <div class="module-title">店铺数据信息查询</div>
+                <div class="module-desc">查询商户店铺与平台信息</div>
+            </div>
+        </div>
+
+        <!-- 消息查询表单 -->
+        <div id="messageForm" class="module-form">
+        <div class="form-group">
+            <label for="merchantInput">选择商户:</label>
+            <div class="merchant-picker">
+                <input type="text" id="merchantInput" placeholder="输入商户名称搜索..." autocomplete="off">
+                <input type="hidden" id="merchantId">
+                <div id="merchantDropdown" class="dropdown" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="startTime">开始时间:</label>
+            <input type="datetime-local" id="startTime" required>
+        </div>
+
+        <div class="form-group">
+            <label for="endTime">结束时间:</label>
+            <input type="datetime-local" id="endTime" required>
+            <div class="hint">时间跨度最长 7 天</div>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email (可选):</label>
+            <input type="text" id="email" placeholder="输入邮箱">
+        </div>
+
+        <button onclick="fetchMessages()">查询消息</button>
+        </div>
+
+        <!-- 人设查询表单 -->
+        <div id="personaForm" class="module-form" style="display: none;">
+        <div class="form-group">
+            <label for="personaMerchantInput">选择商户:</label>
+            <div class="merchant-picker">
+                <input type="text" id="personaMerchantInput" placeholder="输入商户名称搜索..." autocomplete="off">
+                <input type="hidden" id="personaMerchantId">
+                <div id="personaMerchantDropdown" class="dropdown" style="display: none;"></div>
+            </div>
+        </div>
+
+        <button onclick="fetchPersona()">查询人设</button>
+        </div>
+
+        <!-- 店铺数据信息查询表单 -->
+        <div id="merchantInfoForm" class="module-form" style="display: none;">
+        <div class="form-group">
+            <label for="merchantInfoInput">选择商户:</label>
+            <div class="merchant-picker">
+                <input type="text" id="merchantInfoInput" placeholder="输入商户名称搜索..." autocomplete="off">
+                <input type="hidden" id="merchantInfoMerchantId">
+                <div id="merchantInfoDropdown" class="dropdown" style="display: none;"></div>
+            </div>
+        </div>
+
+        <button onclick="fetchMerchantInfo()">查询店铺信息</button>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <div id="imageModal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <!-- 悬浮窗口遮罩层 -->
+    <div id="popoverOverlay" class="popover-overlay"></div>
+
+    <!-- 用户信息悬浮窗口 -->
+    <div id="userInfoPopover" class="user-info-popover">
+        <div class="popover-header">
+            <span class="popover-title">用户信息</span>
+            <button class="popover-close" onclick="closeUserInfoPopover()">&times;</button>
+        </div>
+        <div class="popover-content" id="popoverContent">
+            <div class="popover-loading">加载中...</div>
+        </div>
+    </div>
+
+    <script>
+        // 环境域名配置
+        const ENV_CONFIG = {
+            sit: 'https://aipu-sit.aura-connect.ai',
+            stg: 'https://aipu-stg.aura-connect.ai'
+        };
+
+        // 接口路径
+        const API_PATHS = {
+            fetchAllMerchant: '/aipusaasapi/test/merchant/list',
+            queryMessage: '/aipusaasapi/test/selectMessageDetail',
+            getAiAssistant: '/aipusaasapi/test/getAiAssistant',
+            fetchMerchantInfo: '/aipusaasapi/test/fetchMerchantInfo',
+            getSessionUserInfo: '/aipusaasapi/test/queryExternalUserBySession',
+            queryBySessionIds: '/aipusaasapi/test/queryBySessionIds',
+            getMerchantSetting: '/aipusaasapi/test/getMerchantSetting',
+            discountList: '/aipusaasapi/test/discountList'
+        };
+
+        // 运行时 API 地址（按环境拼接）
+        const API = {
+            fetchAllMerchant: '',
+            queryMessage: '',
+            getAiAssistant: '',
+            fetchMerchantInfo: '',
+            getSessionUserInfo: '',
+            queryBySessionIds: '',
+            getMerchantSetting: '',
+            discountList: ''
+        };
+
+        const ENV_STORAGE_KEY = 'aura_env';
+        let currentEnv = 'sit';
+        let currentModule = 'message';
+
+        // 商户缓存
+        let merchantList = [];
+
+        // 当前查询消息时使用的商户ID(用于会话用户信息查询)
+        let currentQueryMerchantId = null;
+
+        // 会话详情数据缓存
+        const sessionDetailsCache = new Map();
+
+        // JSON 数据缓存(用于复制功能)
+        const jsonDataCache = new Map();
+
+        // 页面加载时初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            initEnvSelector();
+            initDateTimeInputs();
+            bindMerchantEvents();
+            bindModuleNavEvents();
+            fetchAllMerchant();
+        });
+
+        function initDateTimeInputs() {
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+            document.getElementById('startTime').value = formatDateForDateTimeLocal(startOfToday);
+            document.getElementById('endTime').value = formatDateForDateTimeLocal(startOfTomorrow);
+        }
+
+        function formatDateForDateTimeLocal(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        function initEnvSelector() {
+            const storedEnv = localStorage.getItem(ENV_STORAGE_KEY);
+            if (storedEnv && ENV_CONFIG[storedEnv]) {
+                currentEnv = storedEnv;
+            }
+
+            const sitRadio = document.getElementById('env-sit');
+            const stgRadio = document.getElementById('env-stg');
+
+            if (currentEnv === 'stg') {
+                stgRadio.checked = true;
+            } else {
+                sitRadio.checked = true;
+            }
+
+            sitRadio.addEventListener('change', () => {
+                if (sitRadio.checked) {
+                    switchEnv('sit');
+                }
+            });
+
+            stgRadio.addEventListener('change', () => {
+                if (stgRadio.checked) {
+                    switchEnv('stg');
+                }
+            });
+
+            updateApiByEnv();
+        }
+
+        function switchEnv(env) {
+            if (!ENV_CONFIG[env] || env === currentEnv) {
+                return;
+            }
+
+            currentEnv = env;
+            localStorage.setItem(ENV_STORAGE_KEY, env);
+            updateApiByEnv();
+            resetMerchantState();
+            fetchAllMerchant();
+        }
+
+        function updateApiByEnv() {
+            const baseUrl = ENV_CONFIG[currentEnv];
+            API.fetchAllMerchant = API_PATHS.fetchAllMerchant ? `${baseUrl}${API_PATHS.fetchAllMerchant}` : '';
+            API.queryMessage = API_PATHS.queryMessage ? `${baseUrl}${API_PATHS.queryMessage}` : '';
+            API.getAiAssistant = API_PATHS.getAiAssistant ? `${baseUrl}${API_PATHS.getAiAssistant}` : '';
+            API.fetchMerchantInfo = API_PATHS.fetchMerchantInfo ? `${baseUrl}${API_PATHS.fetchMerchantInfo}` : '';
+            API.getSessionUserInfo = API_PATHS.getSessionUserInfo ? `${baseUrl}${API_PATHS.getSessionUserInfo}` : '';
+            API.queryBySessionIds = API_PATHS.queryBySessionIds ? `${baseUrl}${API_PATHS.queryBySessionIds}` : '';
+            API.getMerchantSetting = API_PATHS.getMerchantSetting ? `${baseUrl}${API_PATHS.getMerchantSetting}` : '';
+            API.discountList = API_PATHS.discountList ? `${baseUrl}${API_PATHS.discountList}` : '';
+        }
+
+        function resetMerchantState() {
+            merchantList = [];
+            // 清除消息查询模块的商户选择
+            document.getElementById('merchantInput').value = '';
+            document.getElementById('merchantId').value = '';
+            const merchantDropdown = document.getElementById('merchantDropdown');
+            merchantDropdown.style.display = 'none';
+            merchantDropdown.innerHTML = '';
+            // 清除人设查询模块的商户选择
+            document.getElementById('personaMerchantInput').value = '';
+            document.getElementById('personaMerchantId').value = '';
+            const personaDropdown = document.getElementById('personaMerchantDropdown');
+            personaDropdown.style.display = 'none';
+            personaDropdown.innerHTML = '';
+            // 清除店铺信息查询模块的商户选择
+            document.getElementById('merchantInfoInput').value = '';
+            document.getElementById('merchantInfoMerchantId').value = '';
+            const merchantInfoDropdown = document.getElementById('merchantInfoDropdown');
+            merchantInfoDropdown.style.display = 'none';
+            merchantInfoDropdown.innerHTML = '';
+            // 清空结果和错误
+            document.getElementById('results').innerHTML = '';
+            hideError();
+        }
+
+        function bindMerchantEvents() {
+            // 消息查询模块的商户选择
+            bindSingleMerchantPicker('merchantInput', 'merchantId', 'merchantDropdown');
+
+            // 人设查询模块的商户选择
+            bindSingleMerchantPicker('personaMerchantInput', 'personaMerchantId', 'personaMerchantDropdown');
+
+            // 店铺信息查询模块的商户选择
+            bindSingleMerchantPicker('merchantInfoInput', 'merchantInfoMerchantId', 'merchantInfoDropdown');
+        }
+
+        function bindSingleMerchantPicker(inputId, hiddenId, dropdownId) {
+            const merchantInput = document.getElementById(inputId);
+            const merchantDropdown = document.getElementById(dropdownId);
+            const merchantPicker = merchantInput.closest('.merchant-picker');
+
+            // 输入时进行模糊匹配
+            merchantInput.addEventListener('input', () => {
+                document.getElementById(hiddenId).value = '';
+                renderDropdownForPicker(merchantInput.value, dropdownId, inputId, hiddenId);
+            });
+
+            // 聚焦时展开下拉
+            merchantInput.addEventListener('focus', () => {
+                renderDropdownForPicker(merchantInput.value, dropdownId, inputId, hiddenId);
+            });
+
+            // 回车选择第一条匹配项
+            merchantInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    const firstItem = merchantDropdown.querySelector('.dropdown-item');
+                    if (firstItem) {
+                        event.preventDefault();
+                        selectMerchantForPicker(
+                            firstItem.getAttribute('data-id') || '',
+                            firstItem.getAttribute('data-name') || '',
+                            inputId, hiddenId, dropdownId
+                        );
+                    }
+                }
+            });
+
+            // 点击外部区域关闭下拉
+            document.addEventListener('click', (event) => {
+                if (!merchantPicker.contains(event.target)) {
+                    merchantDropdown.style.display = 'none';
+                }
+            });
+        }
+
+        function bindModuleNavEvents() {
+            const moduleCards = document.querySelectorAll('.module-card');
+            moduleCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const module = card.getAttribute('data-module');
+                    switchModule(module);
+                });
+            });
+        }
+
+        function switchModule(module) {
+            if (module === currentModule) return;
+
+            currentModule = module;
+
+            // 更新导航卡片样式
+            document.querySelectorAll('.module-card').forEach(card => {
+                card.classList.remove('active');
+                if (card.getAttribute('data-module') === module) {
+                    card.classList.add('active');
+                }
+            });
+
+            // 切换表单显示
+            document.querySelectorAll('.module-form').forEach(form => {
+                form.style.display = 'none';
+            });
+
+            const formMap = {
+                'message': 'messageForm',
+                'persona': 'personaForm',
+                'merchant': 'merchantInfoForm'
+            };
+
+            const targetForm = document.getElementById(formMap[module]);
+            if (targetForm) {
+                targetForm.style.display = 'block';
+            }
+
+            // 清空结果和错误
+            document.getElementById('results').innerHTML = '';
+            hideError();
+        }
+
+        function renderDropdownForPicker(keyword, dropdownId, inputId, hiddenId) {
+            const merchantDropdown = document.getElementById(dropdownId);
+            const inputValue = (keyword || '').trim().toLowerCase();
+
+            if (!merchantList || merchantList.length === 0) {
+                merchantDropdown.style.display = 'none';
+                return;
+            }
+
+            // 模糊匹配：名称或ID包含关键字
+            const filtered = inputValue
+                ? merchantList.filter(item =>
+                    item.merchantNameLower.includes(inputValue) ||
+                    item.merchantIdStr.includes(inputValue)
+                )
+                : merchantList;
+
+            if (filtered.length === 0) {
+                merchantDropdown.innerHTML = '<div class="dropdown-empty">无匹配商户</div>';
+                merchantDropdown.style.display = 'block';
+                return;
+            }
+
+            merchantDropdown.innerHTML = filtered.map(item => {
+                return `<div class="dropdown-item" data-id="${item.merchantId}" data-name="${item.merchantName}">${item.merchantName} (${item.merchantId})</div>`;
+            }).join('');
+            merchantDropdown.style.display = 'block';
+
+            // 绑定点击选择
+            Array.from(merchantDropdown.querySelectorAll('.dropdown-item')).forEach(el => {
+                el.addEventListener('click', () => {
+                    selectMerchantForPicker(
+                        el.getAttribute('data-id') || '',
+                        el.getAttribute('data-name') || '',
+                        inputId, hiddenId, dropdownId
+                    );
+                });
+            });
+        }
+
+        function selectMerchantForPicker(merchantId, merchantName, inputId, hiddenId, dropdownId) {
+            document.getElementById(inputId).value = merchantName;
+            document.getElementById(hiddenId).value = merchantId;
+            document.getElementById(dropdownId).style.display = 'none';
+        }
+
+        async function fetchAllMerchant() {
+            // 获取所有三个模块的商户输入框
+            const merchantInputs = [
+                document.getElementById('merchantInput'),
+                document.getElementById('personaMerchantInput'),
+                document.getElementById('merchantInfoInput')
+            ];
+
+            const setAllPlaceholders = (text) => {
+                merchantInputs.forEach(input => {
+                    if (input) input.placeholder = text;
+                });
+            };
+
+            if (!API.fetchAllMerchant) {
+                setAllPlaceholders('请先配置商户接口');
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    page: '1',
+                    pageSize: '200'
+                });
+                const url = `${API.fetchAllMerchant}?${params.toString()}`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                const merchants = data.result?.list || [];
+
+                if (!Array.isArray(merchants) || merchants.length === 0) {
+                    merchantList = [];
+                    setAllPlaceholders('暂无商户数据');
+                    return;
+                }
+
+                // 缓存商户列表
+                merchantList = merchants.map(item => ({
+                    merchantId: item.merchantId,
+                    merchantName: item.merchantName || item.nickname || '未命名商户',
+                    merchantNameLower: (item.merchantName || item.nickname || '').toLowerCase(),
+                    merchantIdStr: String(item.merchantId)
+                }));
+
+                setAllPlaceholders('输入商户名称或ID搜索...');
+            } catch (error) {
+                console.error('Error fetching merchants:', error);
+                setAllPlaceholders('商户加载失败');
+                showError(`商户加载失败: ${error.message}`);
+            }
+        }
+
+        async function fetchMessages() {
+            const merchantInputValue = document.getElementById('merchantInput').value.trim();
+            let merchantId = document.getElementById('merchantId').value;
+            const startTimeInput = document.getElementById('startTime').value;
+            const endTimeInput = document.getElementById('endTime').value;
+            const email = document.getElementById('email').value.trim();
+
+            if (!merchantId && merchantInputValue) {
+                // 兜底：若输入与商户名或ID完全一致，则自动选中
+                const inputLower = merchantInputValue.toLowerCase();
+                const matched = merchantList.find(item =>
+                    item.merchantNameLower === inputLower ||
+                    item.merchantIdStr === merchantInputValue
+                );
+                if (matched) {
+                    merchantId = matched.merchantId;
+                    document.getElementById('merchantId').value = merchantId;
+                }
+            }
+
+            if (!merchantId) {
+                showError('请选择商户');
+                return;
+            }
+            if (!startTimeInput || !endTimeInput) {
+                showError('请选择开始时间和结束时间');
+                return;
+            }
+
+            const startTime = new Date(startTimeInput);
+            const endTime = new Date(endTimeInput);
+
+            if (endTime <= startTime) {
+                showError('结束时间必须晚于开始时间');
+                return;
+            }
+
+            const maxRangeMs = 7 * 24 * 60 * 60 * 1000;
+            if (endTime - startTime > maxRangeMs) {
+                showError('时间跨度不能超过 7 天');
+                return;
+            }
+
+            if (!API.queryMessage) {
+                showError('请先配置消息查询接口');
+                return;
+            }
+
+            const startTimeStr = convertDateTimeFormat(startTimeInput);
+            const endTimeStr = convertDateTimeFormat(endTimeInput);
+
+            showLoading(true);
+            hideError();
+
+            // 保存当前商户ID，用于会话用户信息查询
+            currentQueryMerchantId = merchantId;
+
+            try {
+                const params = new URLSearchParams({
+                    merchantId: merchantId,
+                    startTime: startTimeStr,
+                    endTime: endTimeStr
+                });
+
+                if (email) {
+                    params.append('email', email);
+                }
+
+                const url = `${API.queryMessage}?${params.toString()}`;
+                const response = await fetch(url);
+                console.log('Raw response:', response);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                const messages = data.result || [];
+                displayMessages(messages);
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+                showError(`查询失败: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function convertDateTimeFormat(dateTimeStr) {
+            const date = new Date(dateTimeStr);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = '00';
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // 格式化显示时间：将 T 替换为空格
+        function formatDisplayTime(timeStr) {
+            if (!timeStr) return 'N/A';
+            return timeStr.replace('T', ' ');
+        }
+
+        function displayMessages(messages) {
+            const resultsDiv = document.getElementById('results');
+
+            if (!messages || messages.length === 0) {
+                resultsDiv.innerHTML = '<p>没有找到消息数据</p>';
+                return;
+            }
+
+            // 按 sessionId 分组
+            const groupedMessages = {};
+            messages.forEach(message => {
+                const sessionId = message.sessionId;
+                if (!groupedMessages[sessionId]) {
+                    groupedMessages[sessionId] = [];
+                }
+                groupedMessages[sessionId].push(message);
+            });
+
+            // 对每组内的消息按 id 正序排列
+            Object.keys(groupedMessages).forEach(sessionId => {
+                groupedMessages[sessionId].sort((a, b) => {
+                    const aId = a.id !== null && a.id !== undefined ? a.id : -Infinity;
+                    const bId = b.id !== null && b.id !== undefined ? b.id : -Infinity;
+                    return aId - bId;
+                });
+            });
+
+            // 提取所有 sessionId 用于批量查询
+            const sessionIds = Object.keys(groupedMessages);
+
+            let html = '';
+            Object.keys(groupedMessages).forEach(sessionId => {
+                const sessionMessages = groupedMessages[sessionId];
+                const firstMessage = sessionMessages[0];
+
+                // 查找 form = CUSTOMER 的消息获取 nickname
+                const customerMessage = sessionMessages.find(msg => msg.form === 'CUSTOMER');
+                const displayNickname = customerMessage?.nickname || 'N/A';
+
+                html += `
+                <div class="session" data-session-id="${sessionId}">
+                    <div class="session-header">
+                        <span class="session-title" onclick="toggleSession(this.parentElement)">${sessionId} | ${displayNickname} | ${formatDisplayTime(firstMessage.createDt)}</span>
+                        <div class="session-actions">
+                            <button class="user-info-btn" onclick="fetchSessionUserInfo('${sessionId}', event)">查询用户信息</button>
+                        </div>
+                    </div>
+                    <div class="session-content" style="display: none;">
+                `;
+
+                sessionMessages.forEach(message => {
+                    const hasPictures = message.pictures && Array.isArray(message.pictures) && message.pictures.length > 0;
+
+                    let typeLabel = '';
+                    if (message.senderId != null) {
+                        typeLabel = '<span class="message-type-label label-user">用户</span>';
+                    } else if (message.replierId != null) {
+                        typeLabel = '<span class="message-type-label label-service">客服</span>';
+                    }
+
+                    html += `
+                        <div class="message">
+                            <div class="message-info">
+                                ${typeLabel}发送时间: ${formatDisplayTime(message.createDt)} | 消息类型: ${message.type || 'N/A'}
+                            </div>
+                            <div class="message-content">${message.content ? message.content.replace(/\n/g, '<br>') : 'N/A'}</div>
+                            ${hasPictures ? `<div class="message-pictures">${message.pictures.map(pic => `<div class="picture-item"><img src="${pic}" alt="消息图片" onclick="openModal(this.src)" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"150\" height=\"150\" viewBox=\"0 0 150 150\"><rect width=\"150\" height=\"150\" fill=\"%23f0f0f0\"/><text x=\"50%\" y=\"50%\" font-family=\"Arial\" font-size=\"14\" fill=\"%23999\" text-anchor=\"middle\">图片加载失败</text></svg>'"/></div>`).join('')}</div>` : ''}
+                            ${message.extendInfo ? `<div class="message-extend-info">额外信息: ${JSON.stringify(message.extendInfo)}</div>` : ''}
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+            });
+
+            resultsDiv.innerHTML = html;
+
+            // 自动批量查询会话详情
+            if (sessionIds.length > 0) {
+                fetchSessionDetails(sessionIds);
+            }
+        }
+
+        function toggleSession(header) {
+            const content = header.nextElementSibling;
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // ================== 批量查询会话详情 ==================
+        async function fetchSessionDetails(sessionIds) {
+            if (!sessionIds || sessionIds.length === 0) {
+                return;
+            }
+
+            if (!currentQueryMerchantId) {
+                console.warn('商户ID不存在，跳过会话详情查询');
+                return;
+            }
+
+            if (!API.queryBySessionIds) {
+                console.warn('会话详情查询接口未配置');
+                return;
+            }
+
+            try {
+                // 将 sessionId 转换为 Long 类型数组
+                const sessionIdList = sessionIds.map(id => {
+                    const num = parseInt(id);
+                    return isNaN(num) ? null : num;
+                }).filter(id => id !== null);
+
+                if (sessionIdList.length === 0) {
+                    console.warn('没有有效的会话ID');
+                    return;
+                }
+
+                const requestBody = {
+                    merchantId: currentQueryMerchantId,
+                    sessionIdList: sessionIdList
+                };
+
+                console.log('批量查询会话详情，请求参数:', requestBody);
+
+                const response = await fetch(API.queryBySessionIds, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('会话详情查询结果:', data);
+
+                const sessionDetails = data.result || data;
+
+                if (Array.isArray(sessionDetails) && sessionDetails.length > 0) {
+                    // 缓存会话详情
+                    sessionDetails.forEach(detail => {
+                        if (detail.sessionId) {
+                            sessionDetailsCache.set(String(detail.sessionId), detail);
+                        }
+                    });
+
+                    // 更新会话头部信息
+                    updateSessionHeaders();
+                }
+            } catch (error) {
+                console.error('查询会话详情失败:', error);
+            }
+        }
+
+        // 更新会话头部显示会话详情
+        function updateSessionHeaders() {
+            const sessionElements = document.querySelectorAll('.session');
+
+            sessionElements.forEach(sessionEl => {
+                const sessionId = sessionEl.getAttribute('data-session-id');
+                const detail = sessionDetailsCache.get(sessionId);
+
+                if (detail) {
+                    const titleEl = sessionEl.querySelector('.session-title');
+                    if (titleEl && !titleEl.dataset.enhanced) {
+                        // 标记已增强，避免重复处理
+                        titleEl.dataset.enhanced = 'true';
+
+                        // 构建会话信息展示
+                        let infoHtml = `
+                            <div class="session-detail-info">
+                                <div class="session-detail-row">
+                                    <span class="session-detail-label">会话状态:</span>
+                                    <span class="session-detail-value">${detail.status || 'N/A'}</span>
+                                </div>
+                                ${detail.tagName ? `
+                                <div class="session-detail-row">
+                                    <span class="session-detail-label">标签:</span>
+                                    <span class="session-detail-value">${detail.tagName}</span>
+                                </div>
+                                ` : ''}
+                                ${detail.scene ? `
+                                <div class="session-detail-row">
+                                    <span class="session-detail-label">场景:</span>
+                                    <span class="session-detail-value">${detail.scene}</span>
+                                </div>
+                                ` : ''}
+                                ${detail.feedbackStatusDesc ? `
+                                <div class="session-detail-row">
+                                    <span class="session-detail-label">反馈状态:</span>
+                                    <span class="session-detail-value">${detail.feedbackStatusDesc}</span>
+                                </div>
+                                ` : ''}
+                                ${detail.isTurnHuman !== null && detail.isTurnHuman !== undefined ? `
+                                <div class="session-detail-row">
+                                    <span class="session-detail-label">转人工:</span>
+                                    <span class="session-detail-value">${detail.isTurnHuman === 1 ? '是' : '否'}</span>
+                                </div>
+                                ` : ''}
+                                ${detail.lastMessage ? `
+                                <div class="session-detail-row">
+                                    <span class="session-detail-label">最后消息:</span>
+                                    <span class="session-detail-value">${detail.lastMessage.substring(0, 100)}${detail.lastMessage.length > 100 ? '...' : ''}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        `;
+
+                        // 在会话头部后面插入会话详情
+                        const headerEl = sessionEl.querySelector('.session-header');
+                        if (headerEl) {
+                            const detailDiv = document.createElement('div');
+                            detailDiv.className = 'session-detail-container';
+                            detailDiv.innerHTML = infoHtml;
+                            headerEl.insertAdjacentElement('afterend', detailDiv);
+                        }
+                    }
+                }
+            });
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+
+            // 更新当前模块的按钮状态
+            const buttonMap = {
+                'message': document.querySelector('#messageForm button'),
+                'persona': document.querySelector('#personaForm button'),
+                'merchant': document.querySelector('#merchantInfoForm button')
+            };
+
+            const btn = buttonMap[currentModule];
+            if (btn) {
+                if (show) {
+                    btn.classList.add('loading-btn');
+                    btn.dataset.originalText = btn.innerText;
+                    btn.innerText = '查询中...';
+                } else {
+                    btn.classList.remove('loading-btn');
+                    btn.innerText = btn.dataset.originalText || '查询';
+                }
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function openModal(imageSrc) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.style.display = 'block';
+            modalImg.src = imageSrc;
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+        }
+
+        // 点击模态框外部区域关闭模态框
+        window.onclick = function(event) {
+            const modal = document.getElementById('imageModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+
+        // ================== 人设查询 ==================
+        async function fetchPersona() {
+            const merchantInputValue = document.getElementById('personaMerchantInput').value.trim();
+            let merchantId = document.getElementById('personaMerchantId').value;
+
+            if (!merchantId && merchantInputValue) {
+                const inputLower = merchantInputValue.toLowerCase();
+                const matched = merchantList.find(item => item.merchantNameLower === inputLower);
+                if (matched) {
+                    merchantId = matched.merchantId;
+                    document.getElementById('personaMerchantId').value = merchantId;
+                }
+            }
+
+            if (!merchantId) {
+                showError('请选择商户');
+                return;
+            }
+
+            if (!API.getAiAssistant) {
+                showError('请先配置人设查询接口');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+
+            try {
+                const params = new URLSearchParams({
+                    merchantId: merchantId
+                });
+                const url = `${API.getAiAssistant}?${params.toString()}`;
+                const response = await fetch(url);
+                console.log('Raw response:', response);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                const result = data.result || data;
+                displayPersonaResult(result);
+            } catch (error) {
+                console.error('Error fetching persona:', error);
+                showError(`查询失败: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayPersonaResult(data) {
+            const resultsDiv = document.getElementById('results');
+
+            if (!data) {
+                resultsDiv.innerHTML = '<p>没有找到人设数据</p>';
+                return;
+            }
+
+            // 定义字段标签映射
+            const fieldLabels = {
+                merchantId: '商户ID',
+                merchantName: '商户名称',
+                persona: '人设',
+                assistantName: '助手名称',
+                aiUserId: 'AI用户ID',
+                avatarUrl: '头像URL',
+                merchantAvatarUrl: '商户头像URL',
+                aiAvatarUrl: 'AI头像URL',
+                businessScenario: '业务场景'
+            };
+
+            let html = `
+                <div class="info-card">
+                    <div class="info-card-header">AI助手人设信息</div>
+                    <div class="info-card-body">
+            `;
+
+            Object.keys(fieldLabels).forEach(key => {
+                const value = data[key];
+                const displayValue = value !== null && value !== undefined ? value : 'N/A';
+                html += `
+                    <div class="info-row">
+                        <div class="info-label">${fieldLabels[key]}</div>
+                        <div class="info-value">${displayValue}</div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            // JSON 展示
+            html += createJsonResultCard(data, '原始JSON数据');
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // ================== 店铺信息查询 ==================
+        async function fetchMerchantInfo() {
+            const merchantInputValue = document.getElementById('merchantInfoInput').value.trim();
+            let merchantId = document.getElementById('merchantInfoMerchantId').value;
+
+            if (!merchantId && merchantInputValue) {
+                const inputLower = merchantInputValue.toLowerCase();
+                const matched = merchantList.find(item => item.merchantNameLower === inputLower);
+                if (matched) {
+                    merchantId = matched.merchantId;
+                    document.getElementById('merchantInfoMerchantId').value = merchantId;
+                }
+            }
+
+            if (!merchantId) {
+                showError('请选择商户');
+                return;
+            }
+
+            if (!API.fetchMerchantInfo) {
+                showError('请先配置店铺信息查询接口');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+
+            try {
+                // 并行调用三个接口
+                const [merchantInfoRes, settingRes, discountRes] = await Promise.allSettled([
+                    fetchMerchantInfoBasic(merchantId),
+                    fetchMerchantSetting(merchantId),
+                    fetchDiscountList(merchantId)
+                ]);
+
+                // 处理基本信息接口结果
+                let merchantInfoData = null;
+                if (merchantInfoRes.status === 'fulfilled') {
+                    merchantInfoData = merchantInfoRes.value;
+                } else {
+                    throw new Error(`店铺信息查询失败: ${merchantInfoRes.reason.message}`);
+                }
+
+                // 处理设置接口结果
+                let settingData = null;
+                if (settingRes.status === 'fulfilled') {
+                    settingData = settingRes.value;
+                } else {
+                    console.warn('获取商户设置失败:', settingRes.reason);
+                }
+
+                // 处理折扣接口结果
+                let discountData = null;
+                if (discountRes.status === 'fulfilled') {
+                    discountData = discountRes.value;
+                } else {
+                    console.warn('获取折扣列表失败:', discountRes.reason);
+                }
+
+                displayMerchantInfoResult(merchantInfoData, settingData, discountData);
+            } catch (error) {
+                console.error('Error fetching merchant info:', error);
+                showError(`查询失败: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function fetchMerchantInfoBasic(merchantId) {
+            const params = new URLSearchParams({ merchantId });
+            const url = `${API.fetchMerchantInfo}?${params.toString()}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.result || data;
+        }
+
+        async function fetchMerchantSetting(merchantId) {
+            if (!API.getMerchantSetting) {
+                throw new Error('商户设置接口未配置');
+            }
+            const params = new URLSearchParams({ merchantId });
+            const url = `${API.getMerchantSetting}?${params.toString()}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.result || data;
+        }
+
+        async function fetchDiscountList(merchantId) {
+            if (!API.discountList) {
+                throw new Error('折扣列表接口未配置');
+            }
+            const params = new URLSearchParams({ merchantId });
+            const url = `${API.discountList}?${params.toString()}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.result || data;
+        }
+
+        function displayMerchantInfoResult(data, settingData, discountData) {
+            const resultsDiv = document.getElementById('results');
+
+            if (!data) {
+                resultsDiv.innerHTML = '<p>没有找到店铺信息</p>';
+                return;
+            }
+
+            // 定义字段标签映射
+            const fieldLabels = {
+                merchantId: '商户ID',
+                merchantName: '商户名称',
+                merchantEmail: '商户邮箱',
+                businessScenario: '业务场景',
+                accessToken: 'Access Token',
+                thirdPartyId: '第三方ID',
+                merchantDomain: '商户域名',
+                platformName: '平台名称',
+                accessTokenExtend: 'Token扩展信息'
+            };
+
+            let html = `
+                <div class="info-card">
+                    <div class="info-card-header">店铺数据信息</div>
+                    <div class="info-card-body">
+            `;
+
+            Object.keys(fieldLabels).forEach(key => {
+                const value = data[key];
+                let displayValue = 'N/A';
+
+                if (value !== null && value !== undefined) {
+                    // 尝试格式化 JSON 字符串
+                    if (key === 'accessTokenExtend' && typeof value === 'string') {
+                        try {
+                            const parsed = JSON.parse(value);
+                            displayValue = `<pre style="margin:0;white-space:pre-wrap;word-break:break-all;">${JSON.stringify(parsed, null, 2)}</pre>`;
+                        } catch (e) {
+                            displayValue = value;
+                        }
+                    } else {
+                        displayValue = value;
+                    }
+                }
+
+                html += `
+                    <div class="info-row">
+                        <div class="info-label">${fieldLabels[key]}</div>
+                        <div class="info-value">${displayValue}</div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            // 商户设置
+            html += renderMerchantSettingSection(settingData);
+
+            // 折扣列表
+            html += renderDiscountListSection(discountData);
+
+            // JSON 展示
+            html += createJsonResultCard(data, '原始JSON数据');
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function renderMerchantSettingSection(settingData) {
+            if (!settingData) {
+                return `
+                    <div class="info-card">
+                        <div class="info-card-header">商户设置</div>
+                        <div class="info-card-body">暂无商户设置数据</div>
+                    </div>
+                `;
+            }
+
+            const fieldLabels = {
+                merchantId: '商户ID',
+                aiReplySwitch: 'AI回复开关',
+                language: '语言设置',
+                theme: '主题设置',
+                faqSwitch: 'FAQ开关',
+                turnToManualSetting: '转人工设置'
+            };
+
+            let html = `
+                <div class="info-card">
+                    <div class="info-card-header">商户设置</div>
+                    <div class="info-card-body">
+            `;
+
+            Object.keys(fieldLabels).forEach(key => {
+                const value = settingData[key];
+                if (typeof value === 'boolean') {
+                    html += buildSettingSwitchRow(fieldLabels[key], value);
+                } else {
+                    const displayValue = value !== null && value !== undefined ? value : 'N/A';
+                    html += `
+                        <div class="info-row">
+                            <div class="info-label">${fieldLabels[key]}</div>
+                            <div class="info-value">${displayValue}</div>
+                        </div>
+                    `;
+                }
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            return html;
+        }
+
+        function buildSettingSwitchRow(label, enabled) {
+            return `
+                <div class="setting-switch-container">
+                    <div class="setting-switch-label">${label}</div>
+                    <label class="setting-switch">
+                        <input type="checkbox" ${enabled ? 'checked' : ''} disabled>
+                        <span class="setting-slider"></span>
+                    </label>
+                    <span class="setting-status ${enabled ? 'on' : 'off'}">${enabled ? '开启' : '关闭'}</span>
+                </div>
+            `;
+        }
+
+        function renderDiscountListSection(discountData) {
+            let list = [];
+            if (Array.isArray(discountData)) {
+                list = discountData;
+            } else if (discountData && Array.isArray(discountData.list)) {
+                list = discountData.list;
+            }
+
+            if (!list || list.length === 0) {
+                return `
+                    <div class="info-card">
+                        <div class="info-card-header">折扣列表</div>
+                        <div class="info-card-body">暂无折扣数据</div>
+                    </div>
+                `;
+            }
+
+            const cards = list.map((discount, index) => {
+                const type = (discount.type || 'unknown').toLowerCase();
+                const typeClass = ['percentage', 'fixed_amount', 'free_shipping'].includes(type) ? type : 'unknown';
+                const badgeText = type.replace('_', ' ');
+                const statusClass = getDiscountStatusClass(discount.status);
+                const toggleId = `discount-${Date.now()}-${index}`;
+
+                return `
+                    <div class="discount-card">
+                        <div class="discount-header" onclick="toggleDiscountCard('${toggleId}')">
+                            <div class="discount-title-row">
+                                <span class="discount-badge ${typeClass}">${badgeText}</span>
+                                <span class="discount-code">${discount.code || 'N/A'}</span>
+                                <span class="discount-name">${discount.title || '未命名折扣'}</span>
+                            </div>
+                            <button class="discount-toggle" id="${toggleId}-toggle" onclick="toggleDiscountCard('${toggleId}', event)">▼</button>
+                        </div>
+                        <div class="discount-details" id="${toggleId}">
+                            <div class="discount-detail-row">
+                                <div class="discount-detail-label">折扣ID</div>
+                                <div class="discount-detail-value">${discount.discountId || 'N/A'}</div>
+                            </div>
+                            <div class="discount-detail-row">
+                                <div class="discount-detail-label">折扣类型</div>
+                                <div class="discount-detail-value">${discount.type || 'N/A'}</div>
+                            </div>
+                            <div class="discount-detail-row">
+                                <div class="discount-detail-label">折扣值</div>
+                                <div class="discount-detail-value">${discount.value !== null && discount.value !== undefined ? discount.value : 'N/A'}</div>
+                            </div>
+                            <div class="discount-detail-row">
+                                <div class="discount-detail-label">开始时间</div>
+                                <div class="discount-detail-value">${discount.startTime || 'N/A'}</div>
+                            </div>
+                            <div class="discount-detail-row">
+                                <div class="discount-detail-label">结束时间</div>
+                                <div class="discount-detail-value">${discount.endTime || 'N/A'}</div>
+                            </div>
+                            <div class="discount-detail-row">
+                                <div class="discount-detail-label">状态</div>
+                                <div class="discount-detail-value ${statusClass}">${discount.status || 'N/A'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="info-card">
+                    <div class="info-card-header">折扣列表</div>
+                    <div class="info-card-body">
+                        ${cards}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getDiscountStatusClass(status) {
+            const normalized = (status || '').toLowerCase();
+            if (normalized === 'active') return 'discount-status-active';
+            if (normalized === 'expired') return 'discount-status-expired';
+            if (normalized === 'disabled') return 'discount-status-disabled';
+            return '';
+        }
+
+        function toggleDiscountCard(detailId, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const detailEl = document.getElementById(detailId);
+            const toggleBtn = document.getElementById(`${detailId}-toggle`);
+            if (!detailEl) return;
+
+            const isOpen = detailEl.classList.contains('active');
+            if (isOpen) {
+                detailEl.classList.remove('active');
+                if (toggleBtn) toggleBtn.classList.remove('expanded');
+            } else {
+                detailEl.classList.add('active');
+                if (toggleBtn) toggleBtn.classList.add('expanded');
+            }
+        }
+
+        // ================== 通用工具函数 ==================
+        function createJsonResultCard(data, title) {
+            const jsonStr = JSON.stringify(data, null, 2);
+            const id = 'json-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+            // 将 JSON 数据存储到缓存中
+            jsonDataCache.set(id, jsonStr);
+
+            return `
+                <div class="json-result">
+                    <div class="json-result-header">
+                        <span>${title}</span>
+                        <button class="copy-btn" data-json-id="${id}" onclick="copyToClipboard(this)">复制</button>
+                    </div>
+                    <div class="json-result-content" id="${id}">${syntaxHighlight(jsonStr)}</div>
+                </div>
+            `;
+        }
+
+        function syntaxHighlight(json) {
+            if (!json) return '';
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        function copyToClipboard(btn) {
+            const jsonId = btn.getAttribute('data-json-id');
+            const text = jsonDataCache.get(jsonId);
+
+            if (!text) {
+                console.error('未找到 JSON 数据');
+                alert('复制失败: 数据未找到');
+                return;
+            }
+
+            // 检查浏览器是否支持 clipboard API
+            if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                // 降级方案：使用传统复制方法
+                fallbackCopyToClipboard(text, btn);
+                return;
+            }
+
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '已复制 ✓';
+                btn.style.backgroundColor = '#218838';
+                btn.disabled = true;
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.backgroundColor = '#28a745';
+                    btn.disabled = false;
+                }, 2000);
+            }).catch(err => {
+                console.error('Clipboard API 复制失败:', err);
+                // 如果 clipboard API 失败，尝试降级方案
+                fallbackCopyToClipboard(text, btn);
+            });
+        }
+
+        // 降级复制方案（兼容 HTTP 环境）
+        function fallbackCopyToClipboard(text, btn) {
+            try {
+                // 创建临时 textarea 元素
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                textarea.style.top = '0';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                if (successful) {
+                    const originalText = btn.innerText;
+                    btn.innerText = '已复制 ✓';
+                    btn.style.backgroundColor = '#218838';
+                    btn.disabled = true;
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.style.backgroundColor = '#28a745';
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    alert('复制失败，请手动复制');
+                }
+            } catch (err) {
+                console.error('降级复制失败:', err);
+                alert('复制失败: ' + err.message);
+            }
+        }
+
+        // ================== 会话用户信息查询 ==================
+        async function fetchSessionUserInfo(sessionId, event) {
+            event.stopPropagation(); // 阻止事件冒泡，避免触发会话展开/收起
+
+            if (!sessionId) {
+                alert('会话ID不能为空');
+                return;
+            }
+
+            if (!currentQueryMerchantId) {
+                alert('商户ID不存在，请重新查询消息');
+                return;
+            }
+
+            // 显示悬浮窗口
+            const popover = document.getElementById('userInfoPopover');
+            const overlay = document.getElementById('popoverOverlay');
+            const content = document.getElementById('popoverContent');
+
+            // 计算悬浮窗口位置（相对于点击按钮）
+            const btnRect = event.target.getBoundingClientRect();
+            const popoverWidth = 360;
+            const popoverHeight = 300;
+            let left = btnRect.left;
+            let top = btnRect.bottom + 8;
+
+            // 确保不超出视口右边
+            if (left + popoverWidth > window.innerWidth) {
+                left = window.innerWidth - popoverWidth - 16;
+            }
+            // 确保不超出视口下边
+            if (top + popoverHeight > window.innerHeight) {
+                top = btnRect.top - popoverHeight - 8;
+            }
+
+            popover.style.left = `${Math.max(8, left)}px`;
+            popover.style.top = `${Math.max(8, top)}px`;
+            popover.classList.add('active');
+            overlay.classList.add('active');
+
+            // 显示加载状态
+            content.innerHTML = '<div class="popover-loading">加载中...</div>';
+
+            try {
+                // 使用 getSessionUserInfo 接口，传递 merchantId 和 sessionId
+                const params = new URLSearchParams({
+                    merchantId: currentQueryMerchantId,
+                    sessionId: sessionId
+                });
+                const url = `${API.getSessionUserInfo}?${params.toString()}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('User info response:', data);
+
+                const result = data.result || data;
+                displayUserInfoInPopover(result);
+            } catch (error) {
+                console.error('Error fetching user info:', error);
+                content.innerHTML = `<div class="popover-error">查询失败: ${error.message}</div>`;
+            }
+        }
+
+        function displayUserInfoInPopover(data) {
+            const content = document.getElementById('popoverContent');
+
+            if (!data || Object.keys(data).length === 0) {
+                content.innerHTML = '<div class="popover-error">暂无用户信息</div>';
+                return;
+            }
+
+            // 定义用户信息字段标签映射
+            const userFieldLabels = {
+                id: 'ID',
+                externalUserId: '用户ID',
+                nickname: '昵称',
+                avatarUrl: '头像URL',
+                merchantId: '商户ID',
+                email: '邮箱',
+                openId: 'OpenID',
+                deviceId: '设备ID',
+                createDt: '创建时间',
+                updateDt: '更新时间',
+                status: '状态',
+                lastLoginIp: '最后登录IP',
+                isShopifyCustomer: '是否Shopify客户'
+            };
+
+            let html = '<div class="user-info-grid">';
+
+            Object.keys(data).forEach(key => {
+                const label = userFieldLabels[key] || key;
+                let value = data[key];
+
+                if (value === null || value === undefined) {
+                    value = 'N/A';
+                } else if (typeof value === 'object') {
+                    value = JSON.stringify(value);
+                }
+
+                html += `
+                    <div class="user-info-item">
+                        <div class="user-info-item-label">${label}</div>
+                        <div class="user-info-item-value">${value}</div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        function closeUserInfoPopover() {
+            const popover = document.getElementById('userInfoPopover');
+            const overlay = document.getElementById('popoverOverlay');
+            popover.classList.remove('active');
+            overlay.classList.remove('active');
+        }
+
+        // 点击遮罩层关闭悬浮窗口
+        document.getElementById('popoverOverlay').addEventListener('click', closeUserInfoPopover);
+    </script>
+</body>
+</html>
