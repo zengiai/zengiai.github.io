@@ -1025,10 +1025,10 @@
             resultsDiv.innerHTML = html;
         }
 
-        // 商户设置字段中文映射（完整版）
+        // 商户设置字段中文映射（优先人工映射，兜底自动翻译）
         const SETTING_LABELS = {
-            // 基础信息
             merchantId: '商户ID',
+            merchantName: '商户名称',
             language: '语言设置',
             theme: '主题设置',
             timezone: '时区',
@@ -1036,78 +1036,149 @@
             country: '国家/地区',
             createdAt: '创建时间',
             updatedAt: '更新时间',
-
-            // AI功能开关
             aiReplySwitch: 'AI回复开关',
             aiEnabled: 'AI功能启用',
             faqSwitch: 'FAQ开关',
             autoReplySwitch: '自动回复开关',
             smartReply: '智能回复',
             useGPT: '使用GPT模型',
-
-            // 通知开关
             notificationSwitch: '通知开关',
             emailNotification: '邮件通知',
             smsNotification: '短信通知',
             pushNotification: '推送通知',
             orderNotification: '订单通知',
             messageNotification: '消息通知',
-
-            // 转人工设置
             turnToManualSetting: '转人工设置',
             autoTransfer: '自动转人工',
             transferTimeout: '转人工超时时间',
             manualTriggerKeywords: '转人工触发关键词',
             maxRetryCount: '最大重试次数',
-
-            // 欢迎语配置
             welcomeMessage: '欢迎语配置',
             enabled: '是否启用',
             content: '内容',
             title: '标题',
             type: '类型',
             delay: '延迟时间',
-
-            // 快捷回复配置
             quickReplies: '快捷回复配置',
             replies: '回复列表',
             keyword: '关键词',
             response: '回复内容',
             category: '分类',
-
-            // 工作时间设置
             workingHours: '工作时间设置',
             workStartTime: '工作开始时间',
             workEndTime: '工作结束时间',
             workDays: '工作日',
             nonWorkdayAutoReply: '非工作日自动回复',
-
-            // 机器人形象设置
             botAppearance: '机器人形象设置',
             avatar: '头像',
             name: '名称',
             greeting: '问候语',
             personality: '性格设置',
-
-            // 知识库设置
             knowledgeBase: '知识库设置',
             kbEnabled: '知识库启用',
             kbSources: '知识来源',
             faqCategories: 'FAQ分类',
             autoLearn: '自动学习',
-
-            // 数据分析设置
             analytics: '数据分析设置',
             dataCollection: '数据收集',
             reportFrequency: '报告频率',
             metricsEnabled: '指标监控启用',
-
-            // 安全设置
             security: '安全设置',
             dataEncryption: '数据加密',
             accessControl: '访问控制',
             ipWhitelist: 'IP白名单',
             sessionTimeout: '会话超时时间'
+        };
+
+        // 字段英文词片段 -> 中文（未命中 SETTING_LABELS 时自动组合）
+        const SETTING_TOKEN_LABELS = {
+            ai: 'AI',
+            faq: 'FAQ',
+            gpt: 'GPT',
+            id: 'ID',
+            url: '链接',
+            api: '接口',
+            ip: 'IP',
+            merchant: '商户',
+            shop: '店铺',
+            store: '店铺',
+            name: '名称',
+            title: '标题',
+            content: '内容',
+            status: '状态',
+            switch: '开关',
+            enabled: '启用',
+            disabled: '禁用',
+            auto: '自动',
+            manual: '人工',
+            transfer: '转接',
+            timeout: '超时',
+            retry: '重试',
+            count: '数量',
+            max: '最大',
+            min: '最小',
+            trigger: '触发',
+            keyword: '关键词',
+            message: '消息',
+            order: '订单',
+            product: '商品',
+            shipping: '运费',
+            email: '邮箱',
+            sms: '短信',
+            push: '推送',
+            notification: '通知',
+            session: '会话',
+            user: '用户',
+            customer: '客户',
+            language: '语言',
+            theme: '主题',
+            timezone: '时区',
+            currency: '货币',
+            country: '国家地区',
+            created: '创建',
+            updated: '更新',
+            time: '时间',
+            start: '开始',
+            end: '结束',
+            day: '日',
+            days: '日',
+            hour: '小时',
+            hours: '小时',
+            minute: '分钟',
+            minutes: '分钟',
+            second: '秒',
+            seconds: '秒',
+            welcome: '欢迎',
+            quick: '快捷',
+            reply: '回复',
+            replies: '回复',
+            work: '工作',
+            bot: '机器人',
+            avatar: '头像',
+            greeting: '问候语',
+            personality: '人设',
+            knowledge: '知识',
+            base: '库',
+            source: '来源',
+            sources: '来源',
+            category: '分类',
+            categories: '分类',
+            analytics: '分析',
+            data: '数据',
+            report: '报表',
+            metrics: '指标',
+            security: '安全',
+            encryption: '加密',
+            access: '访问',
+            control: '控制',
+            white: '白',
+            list: '列表',
+            domain: '域名',
+            code: '编码',
+            version: '版本',
+            config: '配置',
+            setting: '设置',
+            value: '值'
         };
 
         function renderMerchantSettingSection(settingData) {
@@ -1120,191 +1191,235 @@
                 `;
             }
 
-            const sectionId = 'setting-section-' + Date.now();
-
-            let html = `
-                <div class="info-card">
-                    <div class="info-card-header collapsible" onclick="toggleSettingSection('${sectionId}')">
-                        <span>⚙️ 商户设置</span>
-                        <span class="collapse-icon" id="${sectionId}-icon">▼</span>
-                    </div>
-                    <div class="info-card-body collapsible-content expanded" id="${sectionId}">
-            `;
-
-            // 递归渲染所有配置项
-            html += renderSettingTree(settingData, 0);
-
-            html += `
-                    </div>
-                </div>
-            `;
-
-            return html;
-        }
-
-        // 递归渲染设置树
-        function renderSettingTree(data, depth) {
-            if (data === null || data === undefined) {
-                return `<span class="setting-null">未设置</span>`;
-            }
-
-            if (typeof data === 'boolean') {
-                return renderBooleanSwitch(data);
-            }
-
-            if (typeof data !== 'object') {
-                return `<span class="setting-value">${escapeHtml(String(data))}</span>`;
-            }
-
-            if (Array.isArray(data)) {
-                if (data.length === 0) {
-                    return `<span class="setting-empty">空数组 []</span>`;
-                }
-                return renderSettingArray(data, depth);
-            }
-
-            // 对象类型
-            const entries = Object.entries(data);
-            if (entries.length === 0) {
-                return `<span class="setting-empty">空对象 {}</span>`;
-            }
-
-            return renderSettingObject(entries, depth);
-        }
-
-        // 渲染 Boolean 滑动开关
-        function renderBooleanSwitch(value) {
-            return `
-                <label class="tree-toggle-switch">
-                    <input type="checkbox" ${value ? 'checked' : ''} disabled>
-                    <span class="tree-toggle-slider"></span>
-                    <span class="tree-toggle-label">${value ? '是' : '否'}</span>
-                </label>
-            `;
-        }
-
-        // 渲染数组
-        function renderSettingArray(arr, depth) {
-            const isSimpleArray = arr.every(item => typeof item !== 'object');
-
-            if (isSimpleArray && arr.length <= 5) {
-                // 简单数组直接展示
-                return `<span class="setting-array-simple">[${arr.map(v => escapeHtml(String(v))).join(', ')}]</span>`;
-            }
-
-            const listId = 'setting-list-' + Math.random().toString(36).substr(2, 9);
-            const indent = depth * 20;
-
-            let html = `<div class="setting-array-container" style="margin-left:${indent}px">`;
-            html += `<div class="setting-array-header" onclick="toggleSettingItem('${listId}', event)">`;
-            html += `<span class="toggle-btn" id="${listId}-btn">▼</span>`;
-            html += `<span class="array-label">数组 [${arr.length}项]</span>`;
-            html += `</div>`;
-            html += `<div class="setting-array-content expanded" id="${listId}">`;
-
-            arr.forEach((item, index) => {
-                html += `<div class="setting-array-item">`;
-                html += `<span class="array-index">[${index}]</span>`;
-                html += renderSettingTree(item, depth + 1);
-                html += `</div>`;
-            });
-
-            html += `</div></div>`;
-            return html;
-        }
-
-        // 渲染对象
-        function renderSettingObject(entries, depth) {
-            const objId = 'setting-obj-' + Math.random().toString(36).substr(2, 9);
-            const indent = depth * 20;
-            const isRoot = depth === 0;
-
-            let html = '';
-
-            if (!isRoot) {
-                html += `<div class="setting-object-container" style="margin-left:${indent}px">`;
-                html += `<div class="setting-object-header" onclick="toggleSettingItem('${objId}', event)">`;
-                html += `<span class="toggle-btn" id="${objId}-btn">▼</span>`;
-                html += `</div>`;
-                html += `<div class="setting-object-content expanded" id="${objId}">`;
-            }
-
-            // 先渲染 Boolean 类型的开关（放在前面醒目位置）
-            const boolEntries = entries.filter(([_, v]) => typeof v === 'boolean');
-            const otherEntries = entries.filter(([_, v]) => typeof v !== 'boolean');
-
-            // 如果有多个布尔值，用网格布局
-            if (boolEntries.length > 1) {
-                html += `<div class="setting-bool-grid">`;
-                boolEntries.forEach(([key, value]) => {
-                    const label = getSettingLabel(key);
-                    html += `
-                        <div class="setting-bool-item">
-                            <span class="setting-key" title="${key}">${label}</span>
-                            ${renderBooleanSwitch(value)}
-                        </div>
-                    `;
-                });
-                html += `</div>`;
-            } else if (boolEntries.length === 1) {
-                const [key, value] = boolEntries[0];
-                const label = getSettingLabel(key);
-                html += `
-                    <div class="setting-row">
-                        <span class="setting-key" title="${key}">${label}</span>
-                        ${renderBooleanSwitch(value)}
+            const topEntries = Object.entries(settingData);
+            if (topEntries.length === 0) {
+                return `
+                    <div class="info-card">
+                        <div class="info-card-header">商户设置</div>
+                        <div class="info-card-body">商户设置为空对象 {}</div>
                     </div>
                 `;
             }
 
-            // 渲染其他类型
-            otherEntries.forEach(([key, value]) => {
-                const label = getSettingLabel(key);
+            const stats = collectSettingStats(settingData);
+            const treeHtml = topEntries
+                .map(([key, value]) => renderSettingNode(key, value, key, 0))
+                .join('');
 
-                if (value !== null && typeof value === 'object') {
-                    // 嵌套对象/数组
-                    const nestedId = 'setting-nested-' + Math.random().toString(36).substr(2, 9);
-                    html += `
-                        <div class="setting-nested-container">
-                            <div class="setting-nested-header" onclick="toggleSettingItem('${nestedId}', event)">
-                                <span class="toggle-btn" id="${nestedId}-btn">▼</span>
-                                <span class="setting-key" title="${key}">${label}</span>
-                                <span class="nested-type">${Array.isArray(value) ? `[${value.length}]` : '{...}'}</span>
-                            </div>
-                            <div class="setting-nested-content expanded" id="${nestedId}">
-                                ${renderSettingTree(value, depth + 1)}
-                            </div>
+            return `
+                <div class="info-card">
+                    <div class="info-card-header">商户设置</div>
+                    <div class="info-card-body">
+                        <div class="setting-overview">
+                            <span class="setting-overview-item">字段总数：${stats.fieldCount}</span>
+                            <span class="setting-overview-item">对象节点：${stats.objectCount}</span>
+                            <span class="setting-overview-item">数组节点：${stats.arrayCount}</span>
+                            <span class="setting-overview-item">最大层级：${stats.maxDepth + 1}</span>
                         </div>
-                    `;
-                } else {
-                    // 基础类型
-                    html += `
-                        <div class="setting-row">
-                            <span class="setting-key" title="${key}">${label}</span>
-                            <span class="setting-value-wrapper">${renderSettingTree(value, depth + 1)}</span>
-                        </div>
-                    `;
+                        <div class="setting-simple-tree">${treeHtml}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSettingNode(key, value, path, depth, customLabel) {
+            if (value !== null && typeof value === 'object') {
+                if (Array.isArray(value)) {
+                    return renderSettingArrayNode(key, value, path, depth, customLabel);
                 }
-            });
+                return renderSettingObjectNode(key, value, path, depth, customLabel);
+            }
+            return renderSettingLeafNode(key, value, path, depth, customLabel);
+        }
 
-            if (!isRoot) {
-                html += `</div></div>`;
+        function renderSettingObjectNode(key, value, path, depth, customLabel) {
+            const entries = Object.entries(value);
+            if (entries.length === 0) {
+                return renderSettingLeafNode(key, '{}', path, depth, customLabel, '空对象');
             }
 
-            return html;
+            const label = customLabel || getSettingLabel(key);
+            const rows = entries
+                .map(([childKey, childValue]) => {
+                    const childPath = `${path}.${childKey}`;
+                    return renderSettingNode(childKey, childValue, childPath, depth + 1);
+                })
+                .join('');
+
+            return `
+                <div class="setting-group-card" style="--depth:${depth}">
+                    <div class="setting-group-head">
+                        <span class="setting-level-tag">L${depth + 1}</span>
+                        <span class="setting-group-name">${escapeHtml(label)}</span>
+                        <span class="setting-origin-key">${escapeHtml(key)}</span>
+                        <span class="setting-data-type">对象（${entries.length}）</span>
+                    </div>
+                    <div class="setting-group-path">路径：${escapeHtml(path)}</div>
+                    <div class="setting-group-body">${rows}</div>
+                </div>
+            `;
+        }
+
+        function renderSettingArrayNode(key, value, path, depth, customLabel) {
+            if (value.length === 0) {
+                return renderSettingLeafNode(key, '[]', path, depth, customLabel, '空数组');
+            }
+
+            const label = customLabel || getSettingLabel(key);
+            const rows = value
+                .map((item, index) => {
+                    const itemPath = `${path}[${index}]`;
+                    return renderSettingNode(`[${index}]`, item, itemPath, depth + 1, `第${index + 1}项`);
+                })
+                .join('');
+
+            return `
+                <div class="setting-group-card" style="--depth:${depth}">
+                    <div class="setting-group-head">
+                        <span class="setting-level-tag">L${depth + 1}</span>
+                        <span class="setting-group-name">${escapeHtml(label)}</span>
+                        <span class="setting-origin-key">${escapeHtml(key)}</span>
+                        <span class="setting-data-type">数组（${value.length}）</span>
+                    </div>
+                    <div class="setting-group-path">路径：${escapeHtml(path)}</div>
+                    <div class="setting-group-body">${rows}</div>
+                </div>
+            `;
+        }
+
+        function renderSettingLeafNode(key, value, path, depth, customLabel, forceType) {
+            const keyIsIndex = /^\[\d+\]$/.test(key);
+            const label = customLabel || (keyIsIndex ? `第${key.slice(1, -1)}项` : getSettingLabel(key));
+            const valueHtml = formatSettingValue(value);
+            const typeLabel = forceType || getSettingValueType(value);
+
+            return `
+                <div class="setting-leaf-card" style="--depth:${depth}">
+                    <div class="setting-leaf-head">
+                        <span class="setting-level-tag">L${depth + 1}</span>
+                        <span class="setting-leaf-name">${escapeHtml(label)}</span>
+                        ${keyIsIndex ? '' : `<span class="setting-origin-key">${escapeHtml(key)}</span>`}
+                        <span class="setting-data-type">${escapeHtml(typeLabel)}</span>
+                    </div>
+                    <div class="setting-group-path">路径：${escapeHtml(path)}</div>
+                    <div class="setting-leaf-value">${valueHtml}</div>
+                </div>
+            `;
+        }
+
+        function formatSettingValue(value) {
+            if (value === null || value === undefined) {
+                return '<span class="setting-value-empty">未设置</span>';
+            }
+
+            if (typeof value === 'boolean') {
+                const cls = value ? 'on' : 'off';
+                const text = value ? '开启' : '关闭';
+                return `<span class="setting-bool-badge ${cls}">${text}</span>`;
+            }
+
+            if (typeof value === 'number' || typeof value === 'bigint') {
+                return `<span class="setting-plain-value">${escapeHtml(String(value))}</span>`;
+            }
+
+            if (typeof value === 'string') {
+                if (value.trim() === '') {
+                    return '<span class="setting-value-empty">空字符串</span>';
+                }
+                return `<span class="setting-plain-value">${escapeHtml(value)}</span>`;
+            }
+
+            return `<span class="setting-plain-value">${escapeHtml(String(value))}</span>`;
+        }
+
+        function getSettingValueType(value) {
+            if (value === null || value === undefined) return '空值';
+            if (typeof value === 'boolean') return '布尔值';
+            if (typeof value === 'number' || typeof value === 'bigint') return '数值';
+            if (typeof value === 'string') return '文本';
+            if (Array.isArray(value)) return '数组';
+            if (typeof value === 'object') return '对象';
+            return '其他';
+        }
+
+        function collectSettingStats(data) {
+            const stats = {
+                fieldCount: 0,
+                objectCount: 0,
+                arrayCount: 0,
+                maxDepth: 0
+            };
+
+            function walk(node, depth) {
+                stats.maxDepth = Math.max(stats.maxDepth, depth);
+
+                if (node === null || node === undefined || typeof node !== 'object') {
+                    stats.fieldCount += 1;
+                    return;
+                }
+
+                if (Array.isArray(node)) {
+                    stats.arrayCount += 1;
+                    if (node.length === 0) {
+                        stats.fieldCount += 1;
+                        return;
+                    }
+                    node.forEach(item => walk(item, depth + 1));
+                    return;
+                }
+
+                const entries = Object.entries(node);
+                stats.objectCount += 1;
+                if (entries.length === 0) {
+                    stats.fieldCount += 1;
+                    return;
+                }
+                entries.forEach(([_, value]) => walk(value, depth + 1));
+            }
+
+            walk(data, 0);
+            return stats;
         }
 
         // 获取中文标签
         function getSettingLabel(key) {
-            return SETTING_LABELS[key] || formatFieldName(key);
+            if (!key) return '';
+            if (SETTING_LABELS[key]) return SETTING_LABELS[key];
+            const translated = tryTranslateSettingKey(key);
+            return translated || formatFieldName(key);
         }
 
-        // 格式化字段名（驼峰转空格）
+        function tryTranslateSettingKey(key) {
+            const segments = key
+                .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+                .replace(/[-\s]+/g, '_')
+                .split('_')
+                .filter(Boolean);
+
+            if (segments.length === 0) {
+                return '';
+            }
+
+            let translatedCount = 0;
+            const translated = segments.map(segment => {
+                const lower = segment.toLowerCase();
+                const mapped = SETTING_TOKEN_LABELS[lower];
+                if (mapped) {
+                    translatedCount += 1;
+                    return mapped;
+                }
+                return segment;
+            });
+
+            return translatedCount > 0 ? translated.join('') : '';
+        }
+
+        // 格式化字段名（驼峰转可读格式）
         function formatFieldName(key) {
             if (!key) return '';
-            // 将驼峰命名转换为带空格的中文风格
             return key
-                .replace(/([A-Z])/g, ' $1')
+                .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+                .replace(/_/g, ' ')
                 .replace(/^./, str => str.toUpperCase())
                 .trim();
         }
@@ -1315,31 +1430,6 @@
             div.textContent = text;
             return div.innerHTML;
         }
-
-        // 切换设置区块折叠状态
-        window.toggleSettingSection = function(sectionId) {
-            const content = document.getElementById(sectionId);
-            const icon = document.getElementById(sectionId + '-icon');
-            if (content && icon) {
-                content.classList.toggle('expanded');
-                content.classList.toggle('collapsed');
-                icon.textContent = content.classList.contains('expanded') ? '▼' : '▶';
-            }
-        };
-
-        // 切换设置项折叠状态
-        window.toggleSettingItem = function(itemId, event) {
-            if (event) {
-                event.stopPropagation();
-            }
-            const content = document.getElementById(itemId);
-            const btn = document.getElementById(itemId + '-btn');
-            if (content && btn) {
-                content.classList.toggle('expanded');
-                content.classList.toggle('collapsed');
-                btn.textContent = content.classList.contains('expanded') ? '▼' : '▶';
-            }
-        };
 
         function renderDiscountListSection(discountData) {
             let list = [];

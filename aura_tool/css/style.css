@@ -1413,3 +1413,159 @@
             background: #fafbfc;
             border-radius: 0 0 6px 6px;
         }
+
+        /* ========== 商户设置简洁分层样式 ========== */
+        .setting-overview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .setting-overview-item {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid #dbe8ff;
+            background: #f4f8ff;
+            color: #2f4b7c;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .setting-simple-tree {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .setting-group-card,
+        .setting-leaf-card {
+            margin-left: calc(var(--depth, 0) * 14px);
+            border: 1px solid #e8eef5;
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: #fff;
+        }
+
+        .setting-group-card {
+            background: #fbfdff;
+        }
+
+        .setting-group-head,
+        .setting-leaf-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .setting-level-tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 20px;
+            border-radius: 999px;
+            background: #e6f1ff;
+            color: #1d4e89;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .setting-group-name,
+        .setting-leaf-name {
+            font-size: 13px;
+            color: #22303c;
+            font-weight: 600;
+        }
+
+        .setting-origin-key {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #f2f4f7;
+            color: #5f6b7a;
+            font-size: 11px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        .setting-data-type {
+            margin-left: auto;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #edf2f7;
+            color: #52606d;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .setting-group-path {
+            margin-top: 6px;
+            color: #7a8694;
+            font-size: 11px;
+            word-break: break-all;
+        }
+
+        .setting-group-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .setting-leaf-value {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border: 1px solid #edf1f5;
+            border-radius: 6px;
+            background: #f7f9fb;
+            word-break: break-all;
+        }
+
+        .setting-plain-value {
+            color: #243447;
+            font-size: 12px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        .setting-value-empty {
+            color: #98a2b3;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .setting-bool-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .setting-bool-badge.on {
+            color: #1d7a3f;
+            background: #e8f7ee;
+            border: 1px solid #bfe7cf;
+        }
+
+        .setting-bool-badge.off {
+            color: #b42318;
+            background: #fff1f0;
+            border: 1px solid #ffd7d4;
+        }
+
+        @media (max-width: 768px) {
+            .setting-group-card,
+            .setting-leaf-card {
+                margin-left: calc(var(--depth, 0) * 8px);
+            }
+
+            .setting-data-type {
+                margin-left: 0;
+            }
+        }
