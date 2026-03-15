@@ -479,8 +479,26 @@
             // 提取所有 sessionId 用于批量查询
             const sessionIds = Object.keys(groupedMessages);
 
-            let html = '';
-            Object.keys(groupedMessages).forEach(sessionId => {
+            // 对 sessionId 进行倒序排列
+            const sortedSessionIds = sessionIds.sort((a, b) => {
+                const aId = parseInt(a) || 0;
+                const bId = parseInt(b) || 0;
+                return bId - aId;
+            });
+
+            // 创建带 tab 的容器结构
+            let html = `
+                <div class="session-tabs-container">
+                    <div class="session-tabs">
+                        <button class="session-tab active" data-tab="all" onclick="switchSessionTab('all')">全部 (${sortedSessionIds.length})</button>
+                        <button class="session-tab" data-tab="merchant" onclick="switchSessionTab('merchant')">前台 (0)</button>
+                        <button class="session-tab" data-tab="manual" onclick="switchSessionTab('manual')">转人工 (0)</button>
+                        <button class="session-tab" data-tab="other" onclick="switchSessionTab('other')">其他 (0)</button>
+                    </div>
+                    <div class="session-tabs-content" id="sessionTabsContent">
+                `;
+
+            sortedSessionIds.forEach(sessionId => {
                 const sessionMessages = groupedMessages[sessionId];
                 const firstMessage = sessionMessages[0];
 
@@ -489,7 +507,7 @@
                 const displayNickname = customerMessage?.nickname || 'N/A';
 
                 html += `
-                <div class="session" data-session-id="${sessionId}">
+                <div class="session" data-session-id="${sessionId}" data-scene="">
                     <div class="session-header">
                         <span class="session-title" onclick="toggleSessionById('${sessionId}', event)">${sessionId} | ${displayNickname} | ${formatDisplayTime(firstMessage.createDt)}</span>
                         <div class="session-actions">
@@ -524,6 +542,8 @@
 
                 html += '</div></div>';
             });
+
+            html += '</div></div>';
 
             resultsDiv.innerHTML = html;
 
@@ -625,11 +645,33 @@
         function updateSessionHeaders() {
             const sessionElements = document.querySelectorAll('.session');
 
+            // 统计各类型会话数量
+            const stats = {
+                all: 0,
+                merchant: 0,
+                manual: 0,
+                other: 0
+            };
+
             sessionElements.forEach(sessionEl => {
                 const sessionId = sessionEl.getAttribute('data-session-id');
                 const detail = sessionDetailsCache.get(sessionId);
 
                 if (detail) {
+                    // 统计并设置 scene 类型
+                    const scene = detail.scene || '';
+                    sessionEl.setAttribute('data-scene', scene);
+
+                    // 根据场景分类
+                    const sceneLower = scene.toLowerCase();
+                    if (sceneLower === 'merchant') {
+                        stats.merchant++;
+                    } else if (sceneLower === 'manual_handoff') {
+                        stats.manual++;
+                    } else {
+                        stats.other++;
+                    }
+
                     const titleEl = sessionEl.querySelector('.session-title');
                     if (titleEl && !titleEl.dataset.enhanced) {
                         // 标记已增强，避免重复处理
@@ -690,7 +732,79 @@
                             headerEl.insertAdjacentElement('afterend', detailDiv);
                         }
                     }
+                } else {
+                    // 没有详情的会话归为"其他"
+                    stats.other++;
                 }
+            });
+
+            // 更新 tab 计数
+            stats.all = sessionElements.length;
+            updateTabCounts(stats);
+        }
+
+        // 更新 tab 按钮的计数
+        function updateTabCounts(stats) {
+            const tabs = document.querySelectorAll('.session-tab');
+            tabs.forEach(tab => {
+                const tabType = tab.getAttribute('data-tab');
+                const count = stats[tabType] || 0;
+
+                // 更新按钮文本
+                let label = '';
+                switch(tabType) {
+                    case 'all':
+                        label = `全部 (${count})`;
+                        break;
+                    case 'merchant':
+                        label = `前台 (${count})`;
+                        break;
+                    case 'manual':
+                        label = `转人工 (${count})`;
+                        break;
+                    case 'other':
+                        label = `其他 (${count})`;
+                        break;
+                }
+                tab.textContent = label;
+            });
+        }
+
+        // 切换 tab 显示
+        function switchSessionTab(tabType) {
+            // 更新 tab 按钮状态
+            const tabs = document.querySelectorAll('.session-tab');
+            tabs.forEach(tab => {
+                if (tab.getAttribute('data-tab') === tabType) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+
+            // 过滤显示会话
+            const sessions = document.querySelectorAll('.session');
+            sessions.forEach(session => {
+                const scene = session.getAttribute('data-scene');
+                const sceneLower = (scene || '').toLowerCase();
+
+                let shouldShow = false;
+                switch(tabType) {
+                    case 'all':
+                        shouldShow = true;
+                        break;
+                    case 'merchant':
+                        shouldShow = sceneLower === 'merchant';
+                        break;
+                    case 'manual':
+                        shouldShow = sceneLower === 'manual_handoff';
+                        break;
+                    case 'other':
+                        shouldShow = sceneLower !== 'merchant' && sceneLower !== 'manual_handoff';
+                        break;
+                }
+
+                session.style.display = shouldShow ? 'block' : 'none';
             });
         }
 
@@ -976,9 +1090,42 @@
                 accessTokenExtend: 'Token扩展信息'
             };
 
+            // 生成跳转按钮 HTML
+            let jumpButtonsHtml = '';
+            if (data.merchantDomain) {
+                const domain = data.merchantDomain;
+                const domainPrefix = domain.split('.')[0]; // 获取域名前缀
+                const frontendUrl = `https://${domain}`;
+                const adminUrl = `https://admin.shopify.com/store/${domainPrefix}`;
+
+                jumpButtonsHtml = `
+                    <div class="info-card-header-buttons">
+                        <a href="${frontendUrl}" target="_blank" class="jump-btn jump-btn-frontend">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                            前台页面
+                        </a>
+                        <a href="${adminUrl}" target="_blank" class="jump-btn jump-btn-admin">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="3" y1="9" x2="21" y2="9"></line>
+                                <line x1="9" y1="21" x2="9" y2="9"></line>
+                            </svg>
+                            后台管理
+                        </a>
+                    </div>
+                `;
+            }
+
             let html = `
                 <div class="info-card">
-                    <div class="info-card-header">店铺数据信息</div>
+                    <div class="info-card-header">
+                        <span class="info-card-header-title">店铺数据信息</span>
+                        ${jumpButtonsHtml}
+                    </div>
                     <div class="info-card-body">
             `;
 

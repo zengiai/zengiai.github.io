@@ -478,6 +478,58 @@
             padding: 10px 15px;
             font-weight: bold;
             border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-card-header-title {
+            flex: 1;
+        }
+
+        .info-card-header-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .jump-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .jump-btn svg {
+            flex-shrink: 0;
+        }
+
+        .jump-btn-frontend {
+            background: #fff;
+            color: #0969da;
+            border-color: #0969da;
+        }
+
+        .jump-btn-frontend:hover {
+            background: #0969da;
+            color: #fff;
+        }
+
+        .jump-btn-admin {
+            background: #05a26b;
+            color: #fff;
+            border-color: #05a26b;
+        }
+
+        .jump-btn-admin:hover {
+            background: #048359;
+            border-color: #048359;
         }
 
         .info-card-body {
@@ -1568,4 +1620,56 @@
             .setting-data-type {
                 margin-left: 0;
             }
+        }
+
+        /* Tab 选项卡样式 */
+        .session-tabs-container {
+            margin-top: 28px;
+            margin-bottom: 40px;
+            background: #fafbfc;
+            padding: 16px 16px 0 16px;
+            border-radius: 12px;
+            border: 1px solid #d0d7de;
+        }
+
+        .session-tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .session-tab {
+            padding: 14px 28px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #656d76;
+            transition: all 0.25s ease;
+            border-radius: 0;
+            position: relative;
+            bottom: -2px;
+            margin-right: 8px;
+        }
+
+        .session-tab:hover {
+            background: transparent;
+            color: #24292f;
+            border-bottom-color: #afb8c1;
+        }
+
+        .session-tab.active {
+            background: transparent;
+            color: #0969da;
+            border-bottom-color: #0969da;
+            font-weight: 700;
+        }
+
+        .session-tabs-content {
+            margin-top: 20px;
+            padding-bottom: 16px;
         }
