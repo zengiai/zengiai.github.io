@@ -7,99 +7,160 @@
     <link rel="stylesheet" href="aura_tool/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="page-header">
-            <h1>Aura 工具</h1>
-        </div>
-        <div class="env-panel">
-            <span class="env-label">环境</span>
-            <div class="env-switch" role="radiogroup" aria-label="环境选择">
-                <input type="radio" name="env" id="env-sit" value="sit">
-                <label for="env-sit">SIT</label>
-                <input type="radio" name="env" id="env-stg" value="stg">
-                <label for="env-stg">STG</label>
-                <span class="env-indicator"></span>
+    <div class="page-wrapper">
+        <!-- 页面标题 -->
+        <h1 class="page-title">Aura 工具</h1>
+
+        <!-- 主容器 -->
+        <div class="main-card">
+            <!-- 环境选择 -->
+            <div class="env-section">
+                <span class="env-text">选择环境</span>
+                <div class="env-switch" role="radiogroup" aria-label="环境选择">
+                    <input type="radio" name="env" id="env-sit" value="sit" checked>
+                    <label for="env-sit">SIT</label>
+                    <input type="radio" name="env" id="env-stg" value="stg">
+                    <label for="env-stg">STG</label>
+                    <span class="env-indicator"></span>
+                </div>
+            </div>
+
+            <!-- 功能模块卡片 -->
+            <div class="module-grid">
+                <div class="module-card active" data-module="message">
+                    <div class="module-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="module-info">
+                        <div class="module-title">消息查询</div>
+                        <div class="module-desc">按商户与时间区间查询消息明细</div>
+                    </div>
+                </div>
+                <div class="module-card" data-module="persona">
+                    <div class="module-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    <div class="module-info">
+                        <div class="module-title">人设查询</div>
+                        <div class="module-desc">查询商户AI助手人设配置</div>
+                    </div>
+                </div>
+                <div class="module-card" data-module="merchant">
+                    <div class="module-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                    </div>
+                    <div class="module-info">
+                        <div class="module-title">店铺数据查询</div>
+                        <div class="module-desc">查询商户店铺与平台信息</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- 表单区域 -->
+            <div class="form-section">
+                <!-- 消息查询表单 -->
+                <div id="messageForm" class="module-form">
+                    <div class="form-group">
+                        <label for="merchantInput">选择商户</label>
+                        <div class="merchant-picker">
+                            <input type="text" id="merchantInput" placeholder="输入商户名称搜索..." autocomplete="off">
+                            <input type="hidden" id="merchantId">
+                            <div id="merchantDropdown" class="dropdown" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startTime">开始时间</label>
+                            <input type="datetime-local" id="startTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="endTime">结束时间</label>
+                            <input type="datetime-local" id="endTime" required>
+                        </div>
+                    </div>
+                    <div class="hint">时间跨度最长 7 天</div>
+
+                    <div class="form-group">
+                        <label for="email">Email（可选）</label>
+                        <input type="text" id="email" placeholder="输入邮箱接收结果">
+                    </div>
+
+                    <button class="btn-primary" onclick="fetchMessages()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        查询消息
+                    </button>
+                </div>
+
+                <!-- 人设查询表单 -->
+                <div id="personaForm" class="module-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="personaMerchantInput">选择商户</label>
+                        <div class="merchant-picker">
+                            <input type="text" id="personaMerchantInput" placeholder="输入商户名称搜索..." autocomplete="off">
+                            <input type="hidden" id="personaMerchantId">
+                            <div id="personaMerchantDropdown" class="dropdown" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="fetchPersona()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        查询人设
+                    </button>
+                </div>
+
+                <!-- 店铺数据信息查询表单 -->
+                <div id="merchantInfoForm" class="module-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="merchantInfoInput">选择商户</label>
+                        <div class="merchant-picker">
+                            <input type="text" id="merchantInfoInput" placeholder="输入商户名称搜索..." autocomplete="off">
+                            <input type="hidden" id="merchantInfoMerchantId">
+                            <div id="merchantInfoDropdown" class="dropdown" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="fetchMerchantInfo()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        查询店铺信息
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="module-nav">
-            <div class="module-card active" data-module="message">
-                <div class="module-title">消息查询</div>
-                <div class="module-desc">按商户与时间区间查询消息明细</div>
-            </div>
-            <div class="module-card" data-module="persona">
-                <div class="module-title">人设查询</div>
-                <div class="module-desc">查询商户AI助手人设配置</div>
-            </div>
-            <div class="module-card" data-module="merchant">
-                <div class="module-title">店铺数据信息查询</div>
-                <div class="module-desc">查询商户店铺与平台信息</div>
-            </div>
+        <!-- 加载状态 -->
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <span>加载中...</span>
         </div>
 
-        <!-- 消息查询表单 -->
-        <div id="messageForm" class="module-form">
-        <div class="form-group">
-            <label for="merchantInput">选择商户:</label>
-            <div class="merchant-picker">
-                <input type="text" id="merchantInput" placeholder="输入商户名称搜索..." autocomplete="off">
-                <input type="hidden" id="merchantId">
-                <div id="merchantDropdown" class="dropdown" style="display: none;"></div>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="startTime">开始时间:</label>
-            <input type="datetime-local" id="startTime" required>
-        </div>
-
-        <div class="form-group">
-            <label for="endTime">结束时间:</label>
-            <input type="datetime-local" id="endTime" required>
-            <div class="hint">时间跨度最长 7 天</div>
-        </div>
-
-        <div class="form-group">
-            <label for="email">Email (可选):</label>
-            <input type="text" id="email" placeholder="输入邮箱">
-        </div>
-
-        <button onclick="fetchMessages()">查询消息</button>
-        </div>
-
-        <!-- 人设查询表单 -->
-        <div id="personaForm" class="module-form" style="display: none;">
-        <div class="form-group">
-            <label for="personaMerchantInput">选择商户:</label>
-            <div class="merchant-picker">
-                <input type="text" id="personaMerchantInput" placeholder="输入商户名称搜索..." autocomplete="off">
-                <input type="hidden" id="personaMerchantId">
-                <div id="personaMerchantDropdown" class="dropdown" style="display: none;"></div>
-            </div>
-        </div>
-
-        <button onclick="fetchPersona()">查询人设</button>
-        </div>
-
-        <!-- 店铺数据信息查询表单 -->
-        <div id="merchantInfoForm" class="module-form" style="display: none;">
-        <div class="form-group">
-            <label for="merchantInfoInput">选择商户:</label>
-            <div class="merchant-picker">
-                <input type="text" id="merchantInfoInput" placeholder="输入商户名称搜索..." autocomplete="off">
-                <input type="hidden" id="merchantInfoMerchantId">
-                <div id="merchantInfoDropdown" class="dropdown" style="display: none;"></div>
-            </div>
-        </div>
-
-        <button onclick="fetchMerchantInfo()">查询店铺信息</button>
-        </div>
-
-        <div id="loading" class="loading" style="display: none;">加载中...</div>
+        <!-- 错误提示 -->
         <div id="error" class="error" style="display: none;"></div>
+
+        <!-- 结果区域 -->
         <div id="results" class="results"></div>
     </div>
 
+    <!-- 图片弹窗 -->
     <div id="imageModal" class="modal">
         <span class="close" onclick="closeModal()">&times;</span>
         <img class="modal-content" id="modalImage">
