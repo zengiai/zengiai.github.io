@@ -640,7 +640,8 @@ body {
     z-index: 999;
 }
 
-.popover-overlay.show {
+.popover-overlay.show,
+.popover-overlay.active {
     display: block;
 }
 
@@ -660,7 +661,8 @@ body {
     overflow: hidden;
 }
 
-.user-info-popover.show {
+.user-info-popover.show,
+.user-info-popover.active {
     display: block;
 }
 
