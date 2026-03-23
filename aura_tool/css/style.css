@@ -1324,6 +1324,11 @@ body {
     padding: 8px 0;
 }
 
+.statistics-export-btn {
+    border: 1px solid #d0d7de;
+    cursor: pointer;
+}
+
 /* 跳转按钮 */
 .jump-btn {
     display: inline-flex;

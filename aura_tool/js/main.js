@@ -15,7 +15,8 @@
             getMerchantSetting: '/aipusaasapi/test/getMerchantSetting',
             discountList: '/aipusaasapi/test/discountList',
             overview: '/aipusaasapi/test/overview',
-            sessionCategory: '/aipusaasapi/test/session/category'
+            sessionCategory: '/aipusaasapi/test/session/category',
+            sessionCategoryCount: '/aipusaasapi/test/session/category/count'
         };
 
         // 运行时 API 地址（按环境拼接）
@@ -29,7 +30,8 @@
             getMerchantSetting: '',
             discountList: '',
             overview: '',
-            sessionCategory: ''
+            sessionCategory: '',
+            sessionCategoryCount: ''
         };
 
         const ENV_STORAGE_KEY = 'aura_env';
@@ -47,6 +49,9 @@
 
         // JSON 数据缓存(用于复制功能)
         const jsonDataCache = new Map();
+
+        // 当前统计看板导出上下文(用于导出饼图分类占比)
+        let currentStatisticsExportContext = null;
 
         // 页面加载时初始化
         window.addEventListener('DOMContentLoaded', () => {
@@ -134,6 +139,7 @@
             API.discountList = API_PATHS.discountList ? `${baseUrl}${API_PATHS.discountList}` : '';
             API.overview = API_PATHS.overview ? `${baseUrl}${API_PATHS.overview}` : '';
             API.sessionCategory = API_PATHS.sessionCategory ? `${baseUrl}${API_PATHS.sessionCategory}` : '';
+            API.sessionCategoryCount = API_PATHS.sessionCategoryCount ? `${baseUrl}${API_PATHS.sessionCategoryCount}` : '';
         }
 
         function resetMerchantState() {
@@ -164,6 +170,7 @@
             statsDropdown.innerHTML = '';
             // 清空结果和错误
             document.getElementById('results').innerHTML = '';
+            currentStatisticsExportContext = null;
             hideError();
         }
 
@@ -262,6 +269,7 @@
 
             // 清空结果和错误
             document.getElementById('results').innerHTML = '';
+            currentStatisticsExportContext = null;
             hideError();
         }
 
@@ -497,21 +505,24 @@
                 return;
             }
 
-            if (!API.overview || !API.sessionCategory) {
+            if (!API.overview || !API.sessionCategory || !API.sessionCategoryCount) {
                 showError('请先配置统计看板接口');
                 return;
             }
 
             const startTimeStr = convertDateTimeToCompactDate(startTimeInput);
             const endTimeStr = convertDateTimeToCompactDate(endTimeInput);
+            const matchedMerchant = merchantList.find(item => String(item.merchantId) === String(merchantId));
+            const merchantName = matchedMerchant?.merchantName || merchantInputValue || String(merchantId);
 
             showLoading(true);
             hideError();
 
             try {
-                const [overviewRes, categoryRes] = await Promise.allSettled([
+                const [overviewRes, categoryRes, categoryCountRes] = await Promise.allSettled([
                     fetchOverviewPanelData(merchantId, startTimeStr, endTimeStr),
-                    fetchCategoryPanelData(merchantId, startTimeStr, endTimeStr)
+                    fetchCategoryPanelData(merchantId, startTimeStr, endTimeStr),
+                    fetchCategoryCountPanelData(merchantId, startTimeStr, endTimeStr)
                 ]);
 
                 const overviewData = overviewRes.status === 'fulfilled' ? overviewRes.value : null;
@@ -527,8 +538,10 @@
                 displayStatisticsResult({
                     overviewData,
                     categoryData,
+                    categoryCountData: categoryCountRes.status === 'fulfilled' ? categoryCountRes.value : null,
                     queryMeta: {
                         merchantId: String(merchantId),
+                        merchantName,
                         startTime: startTimeStr,
                         endTime: endTimeStr
                     }
@@ -577,10 +590,31 @@
             return result && typeof result === 'object' ? result : null;
         }
 
+        async function fetchCategoryCountPanelData(merchantId, startTime, endTime) {
+            const params = new URLSearchParams({
+                merchantId: String(merchantId),
+                startTime,
+                endTime
+            });
+            const url = `${API.sessionCategoryCount}?${params.toString()}`;
+            const response = await fetch(url, {
+                headers: {
+                    'x-language': 'en'
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            const result = normalizeApiResult(data, '分类数量');
+            return result && typeof result === 'object' ? result : null;
+        }
+
         function displayStatisticsResult(payload) {
             const resultsDiv = document.getElementById('results');
             const overviewData = payload?.overviewData || null;
             const categoryData = payload?.categoryData || null;
+            const categoryCountData = payload?.categoryCountData || null;
             const queryMeta = payload?.queryMeta || {};
 
             const queryInfo = `
@@ -633,9 +667,24 @@
             const categoryItems = Object.entries(categoryData || {})
                 .map(([key, value]) => ({
                     key: String(key),
-                    value: parsePercentToNumber(value)
+                    value: parsePercentToNumber(value),
+                    count: parseCountToNumber(categoryCountData ? categoryCountData[key] : null)
                 }))
                 .filter(item => Number.isFinite(item.value) && item.value > 0);
+
+            currentStatisticsExportContext = {
+                queryMeta: {
+                    merchantId: String(queryMeta.merchantId || ''),
+                    merchantName: String(queryMeta.merchantName || ''),
+                    startTime: String(queryMeta.startTime || ''),
+                    endTime: String(queryMeta.endTime || '')
+                },
+                categoryItems: categoryItems.map(item => ({
+                    name: item.key,
+                    value: item.value,
+                    count: item.count
+                }))
+            };
 
             const categoryPalette = ['#1f77b4', '#2ca02c', '#ff7f0e', '#d62728', '#9467bd', '#17becf', '#8c564b', '#bcbd22'];
             const categoryTotal = categoryItems.reduce((sum, item) => sum + item.value, 0);
@@ -674,7 +723,7 @@
                         <div class="statistics-legend-item">
                             <span class="statistics-legend-dot" style="background:${color};"></span>
                             <span class="statistics-legend-name">${escapeHtml(item.key)}</span>
-                            <span class="statistics-legend-value">${formatPercentValue(item.value)}</span>
+                            <span class="statistics-legend-value">${formatPercentValue(item.value)} (${formatCountValue(item.count)})</span>
                         </div>
                     `;
                 }).join('')
@@ -698,7 +747,19 @@
                 </div>
 
                 <div class="info-card">
-                    <div class="info-card-header">分类占比看板</div>
+                    <div class="info-card-header">
+                        <span class="info-card-header-title">分类占比看板</span>
+                        ${categoryItems.length > 0
+                            ? `
+                                <div class="info-card-header-buttons">
+                                    <button type="button" class="jump-btn jump-btn-admin statistics-export-btn" onclick="exportStatisticsPieExcel()">
+                                        导出 Excel
+                                    </button>
+                                </div>
+                            `
+                            : ''
+                        }
+                    </div>
                     <div class="info-card-body">
                         ${categoryItems.length > 0
                             ? `
@@ -738,6 +799,133 @@
                 return str.endsWith('%') ? str : `${str}%`;
             }
             return `+${str}%`;
+        }
+
+        function parseCountToNumber(value) {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : null;
+        }
+
+        function formatCountValue(value) {
+            if (!Number.isFinite(value)) {
+                return '-';
+            }
+            return new Intl.NumberFormat('zh-CN').format(value);
+        }
+
+        function exportStatisticsPieExcel() {
+            if (!currentStatisticsExportContext || !Array.isArray(currentStatisticsExportContext.categoryItems) || currentStatisticsExportContext.categoryItems.length === 0) {
+                showError('当前没有可导出的饼图数据');
+                return;
+            }
+
+            hideError();
+
+            const workbookHtml = buildStatisticsPieExcelHtml(currentStatisticsExportContext);
+            const fileName = buildStatisticsPieExportFileName(currentStatisticsExportContext.queryMeta);
+            const blob = new Blob(['\ufeff', workbookHtml], {
+                type: 'application/vnd.ms-excel;charset=utf-8;'
+            });
+
+            downloadBlob(blob, fileName);
+        }
+
+        function buildStatisticsPieExcelHtml(exportContext) {
+            const queryMeta = exportContext.queryMeta || {};
+            const rowsHtml = exportContext.categoryItems.map((item, index) => {
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${escapeHtml(queryMeta.merchantId || '')}</td>
+                        <td>${escapeHtml(queryMeta.merchantName || '')}</td>
+                        <td>${escapeHtml(queryMeta.startTime || '')}</td>
+                        <td>${escapeHtml(queryMeta.endTime || '')}</td>
+                        <td>${escapeHtml(item.name)}</td>
+                        <td>${escapeHtml(formatPercentValue(item.value))}</td>
+                        <td>${escapeHtml(formatCountValue(item.count))}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            return `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office"
+                      xmlns:x="urn:schemas-microsoft-com:office:excel"
+                      xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="UTF-8">
+                    <!--[if gte mso 9]>
+                    <xml>
+                        <x:ExcelWorkbook>
+                            <x:ExcelWorksheets>
+                                <x:ExcelWorksheet>
+                                    <x:Name>分类占比</x:Name>
+                                    <x:WorksheetOptions>
+                                        <x:DisplayGridlines/>
+                                    </x:WorksheetOptions>
+                                </x:ExcelWorksheet>
+                            </x:ExcelWorksheets>
+                        </x:ExcelWorkbook>
+                    </xml>
+                    <![endif]-->
+                    <style>
+                        table { border-collapse: collapse; }
+                        th, td {
+                            border: 1px solid #d0d7de;
+                            padding: 8px 12px;
+                            font-size: 13px;
+                        }
+                        th {
+                            background: #f6f8fa;
+                            font-weight: 700;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>商户ID</th>
+                                <th>商户名称</th>
+                                <th>开始时间</th>
+                                <th>结束时间</th>
+                                <th>分类名称</th>
+                                <th>占比</th>
+                                <th>数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </body>
+                </html>
+            `;
+        }
+
+        function buildStatisticsPieExportFileName(queryMeta) {
+            const merchantId = sanitizeFileNamePart(queryMeta?.merchantId || 'unknown');
+            const startTime = sanitizeFileNamePart(queryMeta?.startTime || 'start');
+            const endTime = sanitizeFileNamePart(queryMeta?.endTime || 'end');
+            return `statistics-pie-${merchantId}-${startTime}-${endTime}.xls`;
+        }
+
+        function sanitizeFileNamePart(value) {
+            return String(value).replace(/[\\/:*?"<>|\s]+/g, '_');
+        }
+
+        function downloadBlob(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            window.setTimeout(() => {
+                URL.revokeObjectURL(url);
+            }, 0);
         }
 
         function normalizeApiResult(data, apiLabel) {
