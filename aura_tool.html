@@ -4,12 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aura 工具</title>
-    <link rel="stylesheet" href="aura_tool/css/style.css">
+    <link rel="stylesheet" href="aura_tool/css/style.css?v=2026.03.23-2">
 </head>
 <body>
     <div class="page-wrapper">
         <!-- 页面标题 -->
-        <h1 class="page-title">Aura 工具</h1>
+        <div class="page-header">
+            <h1 class="page-title">Aura 工具</h1>
+            <button class="guide-entry-btn" type="button" onclick="openGuideModal()" aria-label="打开操作指南">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"></path>
+                    <path d="M12 17h.01"></path>
+                </svg>
+                <span>操作指南</span>
+            </button>
+        </div>
 
         <!-- 主容器 -->
         <div class="main-card">
@@ -225,6 +235,40 @@
         </div>
     </div>
 
-    <script src="aura_tool/js/main.js"></script>
+    <!-- 操作指南浮窗 -->
+    <div id="guideModalOverlay" class="guide-modal-overlay">
+        <div id="guideModal" class="guide-modal" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle">
+            <div class="guide-modal-header">
+                <div class="guide-modal-title-group">
+                    <div id="guideModalTitle" class="guide-modal-title">Aura 工具操作指南</div>
+                    <div id="guideVersionText" class="guide-modal-version"></div>
+                </div>
+                <button class="popover-close" type="button" onclick="closeGuideModal()">&times;</button>
+            </div>
+            <div id="guideContent" class="guide-modal-content">
+                <div class="popover-loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 一次性更新公告 -->
+    <div id="guideAnnouncement" class="guide-announcement">
+        <div class="guide-announcement-card">
+            <div class="guide-announcement-header">
+                <div>
+                    <div class="guide-announcement-title">Aura 工具已更新</div>
+                    <div id="guideAnnouncementVersion" class="guide-announcement-version"></div>
+                </div>
+                <button class="guide-announcement-close" type="button" onclick="dismissGuideAnnouncement()">&times;</button>
+            </div>
+            <div id="guideAnnouncementBody" class="guide-announcement-body"></div>
+            <div class="guide-announcement-actions">
+                <button class="jump-btn jump-btn-admin" type="button" onclick="dismissGuideAnnouncement()">我知道了</button>
+                <button class="jump-btn jump-btn-frontend" type="button" onclick="openGuideFromAnnouncement()">查看指南</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="aura_tool/js/main.js?v=2026.03.23-2"></script>
 </body>
 </html>

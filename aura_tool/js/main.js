@@ -35,6 +35,14 @@
         };
 
         const ENV_STORAGE_KEY = 'aura_env';
+        const GUIDE_DOC_PATH = 'aura_tool/GUIDE.md';
+        const GUIDE_VERSION = '2026.03.23-2';
+        const GUIDE_ANNOUNCEMENT_STORAGE_KEY = 'aura_tool_guide_announcement_seen_version';
+        const GUIDE_UPDATE_HIGHLIGHTS = [
+            '操作指南已改写成更适合第一次使用的版本，减少技术描述。',
+            '每个功能都补充了“先点什么、再看什么”的使用步骤。',
+            '统计数据和 Excel 导出保留了最关键的操作说明。'
+        ];
         let currentEnv = 'sit';
         let currentModule = 'message';
 
@@ -53,12 +61,16 @@
         // 当前统计看板导出上下文(用于导出饼图分类占比)
         let currentStatisticsExportContext = null;
 
+        // 操作指南缓存
+        let guideHtmlCache = '';
+
         // 页面加载时初始化
         window.addEventListener('DOMContentLoaded', () => {
             initEnvSelector();
             initDateTimeInputs();
             bindMerchantEvents();
             bindModuleNavEvents();
+            initGuideExperience();
             fetchAllMerchant();
         });
 
@@ -83,6 +95,249 @@
             const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
             return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        function initGuideExperience() {
+            const guideVersionText = document.getElementById('guideVersionText');
+            const announcementVersion = document.getElementById('guideAnnouncementVersion');
+
+            if (guideVersionText) {
+                guideVersionText.textContent = `文档版本：${GUIDE_VERSION}`;
+            }
+
+            if (announcementVersion) {
+                announcementVersion.textContent = `更新版本：${GUIDE_VERSION}`;
+            }
+
+            renderGuideAnnouncementBody();
+            loadGuideContent();
+            maybeShowGuideAnnouncement();
+
+            document.addEventListener('keydown', handleGlobalEscape);
+
+            const guideOverlay = document.getElementById('guideModalOverlay');
+            if (guideOverlay) {
+                guideOverlay.addEventListener('click', event => {
+                    if (event.target === guideOverlay) {
+                        closeGuideModal();
+                    }
+                });
+            }
+        }
+
+        async function loadGuideContent(forceReload = false) {
+            const guideContent = document.getElementById('guideContent');
+            if (!guideContent) return;
+
+            if (guideHtmlCache && !forceReload) {
+                guideContent.innerHTML = guideHtmlCache;
+                return;
+            }
+
+            guideContent.innerHTML = '<div class="popover-loading">加载中...</div>';
+
+            try {
+                const response = await fetch(`${GUIDE_DOC_PATH}?v=${encodeURIComponent(GUIDE_VERSION)}`, {
+                    cache: 'no-store'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const markdown = await response.text();
+                guideHtmlCache = `<div class="guide-markdown">${renderMarkdown(markdown)}</div>`;
+                guideContent.innerHTML = guideHtmlCache;
+            } catch (error) {
+                console.error('Failed to load guide document:', error);
+                guideContent.innerHTML = `
+                    <div class="guide-load-error">
+                        操作指南加载失败：${escapeHtml(error.message)}
+                    </div>
+                `;
+            }
+        }
+
+        function renderGuideAnnouncementBody() {
+            const container = document.getElementById('guideAnnouncementBody');
+            if (!container) return;
+
+            const listHtml = GUIDE_UPDATE_HIGHLIGHTS.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+            container.innerHTML = `
+                <div>本次更新内容：</div>
+                <ul>${listHtml}</ul>
+            `;
+        }
+
+        function maybeShowGuideAnnouncement() {
+            const announcement = document.getElementById('guideAnnouncement');
+            if (!announcement) return;
+
+            let seenVersion = '';
+            try {
+                seenVersion = localStorage.getItem(GUIDE_ANNOUNCEMENT_STORAGE_KEY) || '';
+            } catch (error) {
+                console.warn('Unable to read guide announcement version from localStorage:', error);
+            }
+
+            if (seenVersion === GUIDE_VERSION) {
+                return;
+            }
+
+            announcement.classList.add('active');
+        }
+
+        function dismissGuideAnnouncement() {
+            const announcement = document.getElementById('guideAnnouncement');
+            if (announcement) {
+                announcement.classList.remove('active');
+            }
+
+            try {
+                localStorage.setItem(GUIDE_ANNOUNCEMENT_STORAGE_KEY, GUIDE_VERSION);
+            } catch (error) {
+                console.warn('Unable to persist guide announcement version:', error);
+            }
+        }
+
+        function openGuideFromAnnouncement() {
+            dismissGuideAnnouncement();
+            openGuideModal();
+        }
+
+        function openGuideModal() {
+            const overlay = document.getElementById('guideModalOverlay');
+            if (!overlay) return;
+
+            overlay.classList.add('active');
+            loadGuideContent();
+        }
+
+        function closeGuideModal() {
+            const overlay = document.getElementById('guideModalOverlay');
+            if (!overlay) return;
+            overlay.classList.remove('active');
+        }
+
+        function handleGlobalEscape(event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            closeGuideModal();
+            closeUserInfoPopover();
+        }
+
+        function renderMarkdown(markdown) {
+            const lines = String(markdown || '').replace(/\r/g, '').split('\n');
+            const htmlParts = [];
+            const paragraphLines = [];
+            let currentListType = '';
+            let listItems = [];
+            let inCodeBlock = false;
+            let codeLines = [];
+
+            const flushParagraph = () => {
+                if (paragraphLines.length === 0) return;
+                htmlParts.push(`<p>${renderInlineMarkdown(paragraphLines.join(' '))}</p>`);
+                paragraphLines.length = 0;
+            };
+
+            const flushList = () => {
+                if (listItems.length === 0 || !currentListType) return;
+                const itemsHtml = listItems.map(item => `<li>${renderInlineMarkdown(item)}</li>`).join('');
+                htmlParts.push(`<${currentListType}>${itemsHtml}</${currentListType}>`);
+                listItems = [];
+                currentListType = '';
+            };
+
+            const flushCodeBlock = () => {
+                if (!inCodeBlock) return;
+                htmlParts.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+                codeLines = [];
+                inCodeBlock = false;
+            };
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+
+                if (trimmed.startsWith('```')) {
+                    flushParagraph();
+                    flushList();
+                    if (inCodeBlock) {
+                        flushCodeBlock();
+                    } else {
+                        inCodeBlock = true;
+                        codeLines = [];
+                    }
+                    return;
+                }
+
+                if (inCodeBlock) {
+                    codeLines.push(line);
+                    return;
+                }
+
+                if (!trimmed) {
+                    flushParagraph();
+                    flushList();
+                    return;
+                }
+
+                const headingMatch = trimmed.match(/^(#{1,3})\s+(.*)$/);
+                if (headingMatch) {
+                    flushParagraph();
+                    flushList();
+                    const level = headingMatch[1].length;
+                    htmlParts.push(`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`);
+                    return;
+                }
+
+                const blockquoteMatch = trimmed.match(/^>\s+(.*)$/);
+                if (blockquoteMatch) {
+                    flushParagraph();
+                    flushList();
+                    htmlParts.push(`<blockquote>${renderInlineMarkdown(blockquoteMatch[1])}</blockquote>`);
+                    return;
+                }
+
+                const unorderedMatch = trimmed.match(/^-\s+(.*)$/);
+                if (unorderedMatch) {
+                    flushParagraph();
+                    if (currentListType && currentListType !== 'ul') {
+                        flushList();
+                    }
+                    currentListType = 'ul';
+                    listItems.push(unorderedMatch[1]);
+                    return;
+                }
+
+                const orderedMatch = trimmed.match(/^\d+\.\s+(.*)$/);
+                if (orderedMatch) {
+                    flushParagraph();
+                    if (currentListType && currentListType !== 'ol') {
+                        flushList();
+                    }
+                    currentListType = 'ol';
+                    listItems.push(orderedMatch[1]);
+                    return;
+                }
+
+                paragraphLines.push(trimmed);
+            });
+
+            flushParagraph();
+            flushList();
+            flushCodeBlock();
+
+            return htmlParts.join('');
+        }
+
+        function renderInlineMarkdown(text) {
+            let html = escapeHtml(text);
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            return html;
         }
 
         function initEnvSelector() {
