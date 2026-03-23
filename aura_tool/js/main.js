@@ -13,7 +13,9 @@
             getSessionUserInfo: '/aipusaasapi/test/queryExternalUserBySession',
             queryBySessionIds: '/aipusaasapi/test/queryBySessionIds',
             getMerchantSetting: '/aipusaasapi/test/getMerchantSetting',
-            discountList: '/aipusaasapi/test/discountList'
+            discountList: '/aipusaasapi/test/discountList',
+            overview: '/aipusaasapi/test/overview',
+            sessionCategory: '/aipusaasapi/test/session/category'
         };
 
         // 运行时 API 地址（按环境拼接）
@@ -25,7 +27,9 @@
             getSessionUserInfo: '',
             queryBySessionIds: '',
             getMerchantSetting: '',
-            discountList: ''
+            discountList: '',
+            overview: '',
+            sessionCategory: ''
         };
 
         const ENV_STORAGE_KEY = 'aura_env';
@@ -56,9 +60,15 @@
         function initDateTimeInputs() {
             const now = new Date();
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-            const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
-            document.getElementById('startTime').value = formatDateForDateTimeLocal(startOfToday);
-            document.getElementById('endTime').value = formatDateForDateTimeLocal(startOfTomorrow);
+            const startTimeValue = formatDateForDateTimeLocal(startOfToday);
+            const endTimeValue = formatDateForDateTimeLocal(now);
+            const inputIds = ['startTime', 'endTime', 'statsStartTime', 'statsEndTime'];
+
+            inputIds.forEach(id => {
+                const input = document.getElementById(id);
+                if (!input) return;
+                input.value = id.toLowerCase().includes('start') ? startTimeValue : endTimeValue;
+            });
         }
 
         function formatDateForDateTimeLocal(date) {
@@ -122,6 +132,8 @@
             API.queryBySessionIds = API_PATHS.queryBySessionIds ? `${baseUrl}${API_PATHS.queryBySessionIds}` : '';
             API.getMerchantSetting = API_PATHS.getMerchantSetting ? `${baseUrl}${API_PATHS.getMerchantSetting}` : '';
             API.discountList = API_PATHS.discountList ? `${baseUrl}${API_PATHS.discountList}` : '';
+            API.overview = API_PATHS.overview ? `${baseUrl}${API_PATHS.overview}` : '';
+            API.sessionCategory = API_PATHS.sessionCategory ? `${baseUrl}${API_PATHS.sessionCategory}` : '';
         }
 
         function resetMerchantState() {
@@ -144,6 +156,12 @@
             const merchantInfoDropdown = document.getElementById('merchantInfoDropdown');
             merchantInfoDropdown.style.display = 'none';
             merchantInfoDropdown.innerHTML = '';
+            // 清除统计数据模块的商户选择
+            document.getElementById('statsMerchantInput').value = '';
+            document.getElementById('statsMerchantId').value = '';
+            const statsDropdown = document.getElementById('statsMerchantDropdown');
+            statsDropdown.style.display = 'none';
+            statsDropdown.innerHTML = '';
             // 清空结果和错误
             document.getElementById('results').innerHTML = '';
             hideError();
@@ -158,6 +176,9 @@
 
             // 店铺信息查询模块的商户选择
             bindSingleMerchantPicker('merchantInfoInput', 'merchantInfoMerchantId', 'merchantInfoDropdown');
+
+            // 统计数据模块的商户选择
+            bindSingleMerchantPicker('statsMerchantInput', 'statsMerchantId', 'statsMerchantDropdown');
         }
 
         function bindSingleMerchantPicker(inputId, hiddenId, dropdownId) {
@@ -230,7 +251,8 @@
             const formMap = {
                 'message': 'messageForm',
                 'persona': 'personaForm',
-                'merchant': 'merchantInfoForm'
+                'merchant': 'merchantInfoForm',
+                'statistics': 'statisticsForm'
             };
 
             const targetForm = document.getElementById(formMap[module]);
@@ -290,11 +312,12 @@
         }
 
         async function fetchAllMerchant() {
-            // 获取所有三个模块的商户输入框
+            // 获取所有需要商户选择的模块输入框
             const merchantInputs = [
                 document.getElementById('merchantInput'),
                 document.getElementById('personaMerchantInput'),
-                document.getElementById('merchantInfoInput')
+                document.getElementById('merchantInfoInput'),
+                document.getElementById('statsMerchantInput')
             ];
 
             const setAllPlaceholders = (text) => {
@@ -432,6 +455,323 @@
             }
         }
 
+        async function fetchStatistics() {
+            const merchantInputValue = document.getElementById('statsMerchantInput').value.trim();
+            let merchantId = document.getElementById('statsMerchantId').value;
+            const startTimeInput = document.getElementById('statsStartTime').value;
+            const endTimeInput = document.getElementById('statsEndTime').value;
+
+            if (!merchantId && merchantInputValue) {
+                const inputLower = merchantInputValue.toLowerCase();
+                const matched = merchantList.find(item =>
+                    item.merchantNameLower === inputLower ||
+                    item.merchantIdStr === merchantInputValue
+                );
+                if (matched) {
+                    merchantId = matched.merchantId;
+                    document.getElementById('statsMerchantId').value = merchantId;
+                }
+            }
+
+            if (!merchantId) {
+                showError('请选择商户');
+                return;
+            }
+
+            if (!startTimeInput || !endTimeInput) {
+                showError('请选择开始时间和结束时间');
+                return;
+            }
+
+            const startTime = new Date(startTimeInput);
+            const endTime = new Date(endTimeInput);
+
+            if (endTime <= startTime) {
+                showError('结束时间必须晚于开始时间');
+                return;
+            }
+
+            const maxRangeMs = 7 * 24 * 60 * 60 * 1000;
+            if (endTime - startTime > maxRangeMs) {
+                showError('时间跨度不能超过 7 天');
+                return;
+            }
+
+            if (!API.overview || !API.sessionCategory) {
+                showError('请先配置统计看板接口');
+                return;
+            }
+
+            const startTimeStr = convertDateTimeToCompactDate(startTimeInput);
+            const endTimeStr = convertDateTimeToCompactDate(endTimeInput);
+
+            showLoading(true);
+            hideError();
+
+            try {
+                const [overviewRes, categoryRes] = await Promise.allSettled([
+                    fetchOverviewPanelData(merchantId, startTimeStr, endTimeStr),
+                    fetchCategoryPanelData(merchantId, startTimeStr, endTimeStr)
+                ]);
+
+                const overviewData = overviewRes.status === 'fulfilled' ? overviewRes.value : null;
+                const categoryData = categoryRes.status === 'fulfilled' ? categoryRes.value : null;
+
+                if (!overviewData && !categoryData) {
+                    const reasons = [];
+                    if (overviewRes.status === 'rejected') reasons.push(`overview失败: ${overviewRes.reason?.message || '未知错误'}`);
+                    if (categoryRes.status === 'rejected') reasons.push(`分类占比失败: ${categoryRes.reason?.message || '未知错误'}`);
+                    throw new Error(reasons.join(' | '));
+                }
+
+                displayStatisticsResult({
+                    overviewData,
+                    categoryData,
+                    queryMeta: {
+                        merchantId: String(merchantId),
+                        startTime: startTimeStr,
+                        endTime: endTimeStr
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching statistics:', error);
+                showError(`查询失败: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function fetchOverviewPanelData(merchantId, startTime, endTime) {
+            const params = new URLSearchParams({
+                merchantId: String(merchantId),
+                startTime,
+                endTime
+            });
+            const url = `${API.overview}?${params.toString()}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            const result = normalizeApiResult(data, 'overview');
+            return result && typeof result === 'object' ? result : null;
+        }
+
+        async function fetchCategoryPanelData(merchantId, startTime, endTime) {
+            const params = new URLSearchParams({
+                merchantId: String(merchantId),
+                startTime,
+                endTime
+            });
+            const url = `${API.sessionCategory}?${params.toString()}`;
+            const response = await fetch(url, {
+                headers: {
+                    'x-language': 'en'
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            const result = normalizeApiResult(data, '分类占比');
+            return result && typeof result === 'object' ? result : null;
+        }
+
+        function displayStatisticsResult(payload) {
+            const resultsDiv = document.getElementById('results');
+            const overviewData = payload?.overviewData || null;
+            const categoryData = payload?.categoryData || null;
+            const queryMeta = payload?.queryMeta || {};
+
+            const queryInfo = `
+                <div class="statistics-query-info">
+                    <span>商户ID：${escapeHtml(String(queryMeta.merchantId || 'N/A'))}</span>
+                    <span>查询范围：${escapeHtml(String(queryMeta.startTime || 'N/A'))} ~ ${escapeHtml(String(queryMeta.endTime || 'N/A'))}</span>
+                </div>
+            `;
+
+            const overviewFields = [
+                { key: 'totalSession', label: '总会话量', type: 'number' },
+                { key: 'aiResolutionRate', label: 'AI解决率', type: 'percent' },
+                { key: 'transferToHumanRate', label: '转人工率', type: 'percent' },
+                { key: 'countTrend', label: '会话量趋势', type: 'trend' },
+                { key: 'aiResolutionRateTrend', label: 'AI解决率趋势', type: 'trend' },
+                { key: 'transferToHumanRateTrend', label: '转人工率趋势', type: 'trend' }
+            ];
+
+            const overviewItemsHtml = overviewFields
+                .map(field => {
+                    const rawValue = overviewData ? overviewData[field.key] : null;
+                    if (rawValue === null || rawValue === undefined || rawValue === '') {
+                        return '';
+                    }
+
+                    let valueText = '';
+                    let trendClass = '';
+                    if (field.type === 'percent') {
+                        valueText = formatPercentValue(rawValue);
+                    } else if (field.type === 'trend') {
+                        valueText = formatTrendPercentValue(rawValue);
+                        const trendNumber = parsePercentToNumber(rawValue);
+                        if (Number.isFinite(trendNumber)) {
+                            trendClass = trendNumber > 0 ? 'up' : (trendNumber < 0 ? 'down' : 'flat');
+                        }
+                    } else {
+                        valueText = String(rawValue);
+                    }
+
+                    return `
+                        <div class="statistics-overview-item">
+                            <div class="statistics-overview-label">${field.label}</div>
+                            <div class="statistics-overview-value ${trendClass}">${escapeHtml(valueText)}</div>
+                        </div>
+                    `;
+                })
+                .filter(Boolean)
+                .join('');
+
+            const categoryItems = Object.entries(categoryData || {})
+                .map(([key, value]) => ({
+                    key: String(key),
+                    value: parsePercentToNumber(value)
+                }))
+                .filter(item => Number.isFinite(item.value) && item.value > 0);
+
+            const categoryPalette = ['#1f77b4', '#2ca02c', '#ff7f0e', '#d62728', '#9467bd', '#17becf', '#8c564b', '#bcbd22'];
+            const categoryTotal = categoryItems.reduce((sum, item) => sum + item.value, 0);
+
+            let pieGradient = '';
+            if (categoryItems.length > 0) {
+                const segments = [];
+                let currentDeg = 0;
+
+                if (categoryTotal <= 100) {
+                    categoryItems.forEach((item, index) => {
+                        const nextDeg = currentDeg + item.value * 3.6;
+                        segments.push(`${categoryPalette[index % categoryPalette.length]} ${currentDeg}deg ${nextDeg}deg`);
+                        currentDeg = nextDeg;
+                    });
+                    if (currentDeg < 360) {
+                        segments.push(`#eaeef2 ${currentDeg}deg 360deg`);
+                    }
+                } else {
+                    // 异常数据保护：总和超过 100 时按占比归一化，避免饼图溢出
+                    categoryItems.forEach((item, index) => {
+                        const ratio = item.value / categoryTotal;
+                        const nextDeg = currentDeg + ratio * 360;
+                        segments.push(`${categoryPalette[index % categoryPalette.length]} ${currentDeg}deg ${nextDeg}deg`);
+                        currentDeg = nextDeg;
+                    });
+                }
+
+                pieGradient = segments.join(', ');
+            }
+
+            const categoryLegendHtml = categoryItems.length > 0
+                ? categoryItems.map((item, index) => {
+                    const color = categoryPalette[index % categoryPalette.length];
+                    return `
+                        <div class="statistics-legend-item">
+                            <span class="statistics-legend-dot" style="background:${color};"></span>
+                            <span class="statistics-legend-name">${escapeHtml(item.key)}</span>
+                            <span class="statistics-legend-value">${formatPercentValue(item.value)}</span>
+                        </div>
+                    `;
+                }).join('')
+                : '<div class="statistics-empty-text">暂无大于 0 的分类占比数据</div>';
+
+            let html = `
+                <div class="info-card">
+                    <div class="info-card-header">统计查询条件</div>
+                    <div class="info-card-body">
+                        ${queryInfo}
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-card-header">Overview 看板</div>
+                    <div class="info-card-body">
+                        <div class="statistics-overview-grid">
+                            ${overviewItemsHtml || '<div class="statistics-empty-text">暂无 overview 数据</div>'}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-card-header">分类占比看板</div>
+                    <div class="info-card-body">
+                        ${categoryItems.length > 0
+                            ? `
+                                <div class="statistics-category-wrap">
+                                    <div class="statistics-pie-chart" style="background: conic-gradient(${pieGradient});"></div>
+                                    <div class="statistics-legend-list">
+                                        ${categoryLegendHtml}
+                                    </div>
+                                </div>
+                            `
+                            : `<div class="statistics-empty-text">暂无大于 0 的分类占比数据</div>`
+                        }
+                    </div>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function formatPercentValue(value) {
+            const num = Number(value);
+            if (Number.isFinite(num)) {
+                return `${num}%`;
+            }
+            const str = String(value);
+            return str.endsWith('%') ? str : `${str}%`;
+        }
+
+        function formatTrendPercentValue(value) {
+            const num = Number(value);
+            if (Number.isFinite(num)) {
+                if (num > 0) return `+${num}%`;
+                return `${num}%`;
+            }
+            const str = String(value);
+            if (str.startsWith('+') || str.startsWith('-') || str.endsWith('%')) {
+                return str.endsWith('%') ? str : `${str}%`;
+            }
+            return `+${str}%`;
+        }
+
+        function normalizeApiResult(data, apiLabel) {
+            if (!data || typeof data !== 'object') {
+                throw new Error(`${apiLabel} 接口返回为空`);
+            }
+
+            const status = data.status;
+            const hasStatus = status !== undefined && status !== null;
+            const statusNum = Number(status);
+            const isSuccess = status === true || statusNum === 1 || statusNum === 200;
+
+            if (hasStatus && !isSuccess) {
+                throw new Error(data.msg || `${apiLabel} 接口返回失败`);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(data, 'result')) {
+                return data.result;
+            }
+
+            // 兼容后端直接返回业务对象
+            return data;
+        }
+
+        function parsePercentToNumber(value) {
+            if (typeof value === 'number') return value;
+            if (typeof value === 'string') {
+                const cleaned = value.replace('%', '').trim();
+                const num = Number(cleaned);
+                return Number.isFinite(num) ? num : NaN;
+            }
+            return NaN;
+        }
+
         function convertDateTimeFormat(dateTimeStr) {
             const date = new Date(dateTimeStr);
             const year = date.getFullYear();
@@ -441,6 +781,14 @@
             const minutes = String(date.getMinutes()).padStart(2, '0');
             const seconds = '00';
             return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        function convertDateTimeToCompactDate(dateTimeStr) {
+            const date = new Date(dateTimeStr);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}${month}${day}`;
         }
 
         // 格式化显示时间：将 T 替换为空格
@@ -815,7 +1163,8 @@
             const buttonMap = {
                 'message': document.querySelector('#messageForm button'),
                 'persona': document.querySelector('#personaForm button'),
-                'merchant': document.querySelector('#merchantInfoForm button')
+                'merchant': document.querySelector('#merchantInfoForm button'),
+                'statistics': document.querySelector('#statisticsForm button')
             };
 
             const btn = buttonMap[currentModule];
