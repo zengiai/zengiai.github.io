@@ -30,7 +30,7 @@ body {
     line-height: 1.6;
 }
 
-/* --- 字符串编码/解码工具页 (encoder_decoder.html) 样式 --- */
+/* --- 字符串编码/解码工具页样式 --- */
 .container { /* 这是工具页面主内容的容器 */
     background-color: #fff;
     padding: 35px 40px;
@@ -193,7 +193,7 @@ button:active {
     opacity: 1;
 }
 
-/* --- 字符串编码/解码工具页 (encoder_decoder.html) 响应式调整 --- */
+/* --- 字符串编码/解码工具页响应式调整 --- */
 @media (max-width: 768px) {
     .container {
         padding: 25px 30px;
