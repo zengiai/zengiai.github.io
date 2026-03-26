@@ -36,12 +36,12 @@
 
         const ENV_STORAGE_KEY = 'aura_env';
         const GUIDE_DOC_PATH = 'aura_tool/GUIDE.md';
-        const GUIDE_VERSION = '2026.03.23-2';
+        const GUIDE_VERSION = '2026.03.26-1';
         const GUIDE_ANNOUNCEMENT_STORAGE_KEY = 'aura_tool_guide_announcement_seen_version';
         const GUIDE_UPDATE_HIGHLIGHTS = [
-            '操作指南已改写成更适合第一次使用的版本，减少技术描述。',
-            '每个功能都补充了“先点什么、再看什么”的使用步骤。',
-            '统计数据和 Excel 导出保留了最关键的操作说明。'
+            '消息查询支持 Markdown 展示，标题、列表、引用、代码块与链接都能直接阅读。',
+            '消息渲染统一走安全转义，避免后端文本直接插入页面。',
+            '操作指南已同步补充消息 Markdown 展示说明。'
         ];
         let currentEnv = 'sit';
         let currentModule = 'message';
@@ -228,7 +228,8 @@
             closeUserInfoPopover();
         }
 
-        function renderMarkdown(markdown) {
+        function renderMarkdown(markdown, options = {}) {
+            const { preserveLineBreaksInParagraph = false } = options;
             const lines = String(markdown || '').replace(/\r/g, '').split('\n');
             const htmlParts = [];
             const paragraphLines = [];
@@ -239,7 +240,10 @@
 
             const flushParagraph = () => {
                 if (paragraphLines.length === 0) return;
-                htmlParts.push(`<p>${renderInlineMarkdown(paragraphLines.join(' '))}</p>`);
+                const paragraphHtml = preserveLineBreaksInParagraph
+                    ? paragraphLines.map(line => renderInlineMarkdown(line)).join('<br>')
+                    : renderInlineMarkdown(paragraphLines.join(' '));
+                htmlParts.push(`<p>${paragraphHtml}</p>`);
                 paragraphLines.length = 0;
             };
 
@@ -301,7 +305,7 @@
                     return;
                 }
 
-                const unorderedMatch = trimmed.match(/^-\s+(.*)$/);
+                const unorderedMatch = trimmed.match(/^[-*+]\s+(.*)$/);
                 if (unorderedMatch) {
                     flushParagraph();
                     if (currentListType && currentListType !== 'ul') {
@@ -334,10 +338,53 @@
         }
 
         function renderInlineMarkdown(text) {
-            let html = escapeHtml(text);
+            const source = String(text || '');
+            const tokens = [];
+
+            const createToken = html => {
+                const token = `__MD_TOKEN_${tokens.length}__`;
+                tokens.push({ token, html });
+                return token;
+            };
+
+            let html = source.replace(/`([^`]+)`/g, (_, code) => {
+                return createToken(`<code>${escapeHtml(code)}</code>`);
+            });
+
+            html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, url) => {
+                const safeUrl = sanitizeMarkdownUrl(url);
+                if (!safeUrl) {
+                    return createToken(`${escapeHtml(label)} (${escapeHtml(url)})`);
+                }
+                return createToken(`<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`);
+            });
+
+            html = escapeHtml(html);
             html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            tokens.forEach(({ token, html: tokenHtml }) => {
+                html = html.replaceAll(token, tokenHtml);
+            });
+
             return html;
+        }
+
+        function sanitizeMarkdownUrl(url) {
+            const normalizedUrl = String(url || '').trim();
+            if (!normalizedUrl) {
+                return '';
+            }
+
+            return /^(https?:\/\/|mailto:|tel:)/i.test(normalizedUrl) ? normalizedUrl : '';
+        }
+
+        function renderMessageContent(content) {
+            const normalizedContent = String(content || '').trim();
+            if (!normalizedContent) {
+                return 'N/A';
+            }
+
+            return `<div class="message-markdown">${renderMarkdown(normalizedContent, { preserveLineBreaksInParagraph: true })}</div>`;
         }
 
         function initEnvSelector() {
@@ -1296,11 +1343,12 @@
                 // 查找 form = CUSTOMER 的消息获取 nickname
                 const customerMessage = sessionMessages.find(msg => msg.form === 'CUSTOMER');
                 const displayNickname = customerMessage?.nickname || 'N/A';
+                const safeDisplayNickname = escapeHtml(displayNickname);
 
                 html += `
                 <div class="session" data-session-id="${sessionId}" data-scene="">
                     <div class="session-header">
-                        <span class="session-title" onclick="toggleSessionById('${sessionId}', event)">${sessionId} | ${displayNickname} | ${formatDisplayTime(firstMessage.createDt)}</span>
+                        <span class="session-title" onclick="toggleSessionById('${sessionId}', event)">${sessionId} | ${safeDisplayNickname} | ${escapeHtml(formatDisplayTime(firstMessage.createDt))}</span>
                         <div class="session-actions">
                             <button class="session-toggle-btn" onclick="toggleSessionById('${sessionId}', event)">▶ 展开</button>
                             <button class="user-info-btn" onclick="fetchSessionUserInfo('${sessionId}', event)">查询用户信息</button>
@@ -1319,14 +1367,20 @@
                         typeLabel = '<span class="message-type-label label-service">客服</span>';
                     }
 
+                    const messageType = escapeHtml(message.type || 'N/A');
+                    const displayTime = escapeHtml(formatDisplayTime(message.createDt));
+                    const extendInfo = message.extendInfo
+                        ? escapeHtml(JSON.stringify(message.extendInfo, null, 2))
+                        : '';
+
                     html += `
                         <div class="message">
                             <div class="message-info">
-                                ${typeLabel}发送时间: ${formatDisplayTime(message.createDt)} | 消息类型: ${message.type || 'N/A'}
+                                ${typeLabel}发送时间: ${displayTime} | 消息类型: ${messageType}
                             </div>
-                            <div class="message-content">${message.content ? message.content.replace(/\n/g, '<br>') : 'N/A'}</div>
-                            ${hasPictures ? `<div class="message-pictures">${message.pictures.map(pic => `<div class="picture-item"><img src="${pic}" alt="消息图片" onclick="openModal(this.src)" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"150\" height=\"150\" viewBox=\"0 0 150 150\"><rect width=\"150\" height=\"150\" fill=\"%23f0f0f0\"/><text x=\"50%\" y=\"50%\" font-family=\"Arial\" font-size=\"14\" fill=\"%23999\" text-anchor=\"middle\">图片加载失败</text></svg>'"/></div>`).join('')}</div>` : ''}
-                            ${message.extendInfo ? `<div class="message-extend-info">额外信息: ${JSON.stringify(message.extendInfo)}</div>` : ''}
+                            <div class="message-content">${renderMessageContent(message.content)}</div>
+                            ${hasPictures ? `<div class="message-pictures">${message.pictures.map(pic => `<div class="picture-item"><img src="${escapeHtml(pic)}" alt="消息图片" onclick="openModal(this.src)" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"150\" height=\"150\" viewBox=\"0 0 150 150\"><rect width=\"150\" height=\"150\" fill=\"%23f0f0f0\"/><text x=\"50%\" y=\"50%\" font-family=\"Arial\" font-size=\"14\" fill=\"%23999\" text-anchor=\"middle\">图片加载失败</text></svg>'"/></div>`).join('')}</div>` : ''}
+                            ${message.extendInfo ? `<div class="message-extend-info">额外信息: ${extendInfo}</div>` : ''}
                         </div>
                     `;
                 });
