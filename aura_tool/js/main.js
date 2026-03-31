@@ -36,12 +36,12 @@
 
         const ENV_STORAGE_KEY = 'aura_env';
         const GUIDE_DOC_PATH = 'aura_tool/GUIDE.md';
-        const GUIDE_VERSION = '2026.03.26-1';
+        const GUIDE_VERSION = '2026.03.31-1';
         const GUIDE_ANNOUNCEMENT_STORAGE_KEY = 'aura_tool_guide_announcement_seen_version';
         const GUIDE_UPDATE_HIGHLIGHTS = [
-            '消息查询支持 Markdown 展示，标题、列表、引用、代码块与链接都能直接阅读。',
-            '消息渲染统一走安全转义，避免后端文本直接插入页面。',
-            '操作指南已同步补充消息 Markdown 展示说明。'
+            '统计数据分类占比看板改为按数量倒序排列，优先看到量级最大的分类。',
+            '分类数量相同时，再按占比倒序和分类名称稳定排序，避免顺序抖动。',
+            '操作指南已同步补充统计看板排序说明。'
         ];
         let currentEnv = 'sit';
         let currentModule = 'message';
@@ -972,7 +972,20 @@
                     value: parsePercentToNumber(value),
                     count: parseCountToNumber(categoryCountData ? categoryCountData[key] : null)
                 }))
-                .filter(item => Number.isFinite(item.value) && item.value > 0);
+                .filter(item => Number.isFinite(item.value) && item.value > 0)
+                .sort((left, right) => {
+                    const leftCount = Number.isFinite(left.count) ? left.count : Number.NEGATIVE_INFINITY;
+                    const rightCount = Number.isFinite(right.count) ? right.count : Number.NEGATIVE_INFINITY;
+                    if (rightCount !== leftCount) {
+                        return rightCount - leftCount;
+                    }
+
+                    if (right.value !== left.value) {
+                        return right.value - left.value;
+                    }
+
+                    return left.key.localeCompare(right.key, 'zh-CN');
+                });
 
             currentStatisticsExportContext = {
                 queryMeta: {
