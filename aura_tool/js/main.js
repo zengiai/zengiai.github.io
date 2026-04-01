@@ -38,12 +38,12 @@
 
         const ENV_STORAGE_KEY = 'aura_env';
         const GUIDE_DOC_PATH = 'aura_tool/GUIDE.md';
-        const GUIDE_VERSION = '2026.04.01-14';
+        const GUIDE_VERSION = '2026.04.01-15';
         const GUIDE_ANNOUNCEMENT_STORAGE_KEY = 'aura_tool_guide_announcement_seen_version';
         const GUIDE_UPDATE_HIGHLIGHTS = [
-            '会话 UI 图例弹层改成稳定可滚动，首次强制展示时也能完整查看。',
-            '环境选择也移到左侧边栏，页面主区域只保留当前工具表单。',
-            '会话标签说明改成直接对应 feedbackStatus、isTurnHuman、tagName。'
+            '聊天详情里，CUSTOMER 侧客服标签会区分显示 AI 或人工。',
+            'MERCHANT_EMAIL_FORM、CUSTOMER_EMAIL_FORM、PRODUCTS 支持按结构化卡片渲染。',
+            '除 TEXT、COMPLEX 外，空内容不再回退显示为 -。'
         ];
         const SESSION_UI_GUIDE_MARKER = ':::session-ui-guide:::';
         const SESSION_UI_GUIDE_STEPS = [
@@ -768,13 +768,330 @@
             return /^(https?:\/\/|mailto:|tel:)/i.test(normalizedUrl) ? normalizedUrl : '';
         }
 
-        function renderMessageContent(content) {
-            const normalizedContent = String(content || '').trim();
+        function isTextLikeMessageType(type) {
+            const normalized = String(type || '').trim().toUpperCase();
+            return normalized === 'TEXT' || normalized === 'COMPLEX';
+        }
+
+        function isStructuredMessageType(type) {
+            const normalized = String(type || '').trim().toUpperCase();
+            return normalized === 'MERCHANT_EMAIL_FORM' || normalized === 'CUSTOMER_EMAIL_FORM' || normalized === 'PRODUCTS';
+        }
+
+        function renderMessageContent(content, options = {}) {
+            const { showPlaceholder = false } = options;
+            const normalizedContent = String(content ?? '').trim();
             if (!normalizedContent) {
-                return 'N/A';
+                return showPlaceholder ? '<span class="message-empty-placeholder">-</span>' : '';
             }
 
             return `<div class="message-markdown">${renderMarkdown(normalizedContent, { preserveLineBreaksInParagraph: true })}</div>`;
+        }
+
+        function parseJsonSafely(value) {
+            if (value === null || value === undefined) {
+                return null;
+            }
+
+            if (typeof value === 'object') {
+                return value;
+            }
+
+            if (typeof value !== 'string') {
+                return null;
+            }
+
+            const normalized = value.trim();
+            if (!normalized) {
+                return null;
+            }
+
+            try {
+                return JSON.parse(normalized);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function unwrapPayloadValue(payload, key) {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                return payload;
+            }
+            return payload[key] !== undefined ? payload[key] : payload;
+        }
+
+        function normalizeBooleanValue(value) {
+            if (typeof value === 'boolean') {
+                return value;
+            }
+
+            const normalized = String(value ?? '').trim().toLowerCase();
+            if (normalized === 'true') {
+                return true;
+            }
+            if (normalized === 'false') {
+                return false;
+            }
+            return null;
+        }
+
+        function buildStructuredRows(rows) {
+            const validRows = rows.filter(row => row && row.value !== undefined);
+            if (validRows.length === 0) {
+                return '';
+            }
+
+            return `
+                <div class="chat-structured-grid">
+                    ${validRows.map(row => `
+                        <div class="chat-structured-row">
+                            <span class="chat-structured-label">${escapeHtml(row.label)}</span>
+                            <span class="chat-structured-value">${row.value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderStructuredValue(value, options = {}) {
+            const { emptyText = '未填写' } = options;
+            if (value === null || value === undefined) {
+                return `<span class="is-empty">${escapeHtml(emptyText)}</span>`;
+            }
+
+            if (typeof value === 'boolean') {
+                return value
+                    ? '<span class="chat-inline-badge tone-success">是</span>'
+                    : '<span class="chat-inline-badge tone-muted">否</span>';
+            }
+
+            const normalized = String(value).trim();
+            if (!normalized) {
+                return `<span class="is-empty">${escapeHtml(emptyText)}</span>`;
+            }
+
+            const safeUrl = sanitizeMarkdownUrl(normalized);
+            if (safeUrl) {
+                return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(normalized)}</a>`;
+            }
+
+            return escapeHtml(normalized);
+        }
+
+        function renderStructuredCard(title, body, extraClass = '') {
+            if (!body) {
+                return '';
+            }
+
+            const className = ['chat-structured-card', extraClass].filter(Boolean).join(' ');
+            return `
+                <div class="${className}">
+                    <div class="chat-structured-title">${escapeHtml(title)}</div>
+                    ${body}
+                </div>
+            `;
+        }
+
+        function resolveMessagePayload(message, key) {
+            const directValue = parseJsonSafely(message?.[key]) ?? message?.[key];
+            if (directValue !== null && directValue !== undefined && directValue !== '') {
+                return unwrapPayloadValue(directValue, key);
+            }
+
+            const parsedContent = parseJsonSafely(message?.content);
+            if (parsedContent && typeof parsedContent === 'object' && !Array.isArray(parsedContent)) {
+                return unwrapPayloadValue(parsedContent, key);
+            }
+
+            return null;
+        }
+
+        function renderMerchantEmailFormMessage(message) {
+            const payload = resolveMessagePayload(message, 'merchantEmailForm');
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                return '';
+            }
+
+            return renderStructuredCard(
+                '商户邮箱表单',
+                buildStructuredRows([
+                    { label: '提示文案', value: renderStructuredValue(payload.tip) },
+                    { label: '邮箱', value: renderStructuredValue(payload.email) }
+                ]),
+                'tone-warning-soft'
+            );
+        }
+
+        function renderCustomerEmailFormMessage(message) {
+            const payload = resolveMessagePayload(message, 'customerEmailForm');
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                return '';
+            }
+
+            return renderStructuredCard(
+                '客户邮箱表单',
+                buildStructuredRows([
+                    { label: '提示文案', value: renderStructuredValue(payload.tip) },
+                    { label: '邮箱', value: renderStructuredValue(payload.email) },
+                    { label: '订阅提示', value: renderStructuredValue(payload.subscribeMerchantTip) },
+                    { label: '订阅店铺', value: renderStructuredValue(normalizeBooleanValue(payload.subscribeMerchant), { emptyText: '未设置' }) },
+                    { label: '已确认', value: renderStructuredValue(normalizeBooleanValue(payload.confirmed), { emptyText: '未设置' }) }
+                ]),
+                'tone-info-soft'
+            );
+        }
+
+        function normalizeProductsPayload(message) {
+            const directProducts = message?.products;
+            const parsedDirectProducts = parseJsonSafely(directProducts);
+            const contentPayload = parseJsonSafely(message?.content);
+            const candidates = [
+                directProducts,
+                parsedDirectProducts,
+                parsedDirectProducts?.products,
+                contentPayload?.products,
+                parseJsonSafely(contentPayload?.products)
+            ];
+
+            for (const candidate of candidates) {
+                const normalizedCandidate = parseJsonSafely(candidate) ?? candidate;
+                if (Array.isArray(normalizedCandidate)) {
+                    return normalizedCandidate;
+                }
+            }
+
+            return [];
+        }
+
+        function formatProductPrice(product) {
+            const minPrice = Number(product?.priceRangeV2?.minVariantPrice?.amount);
+            const maxPrice = Number(product?.priceRangeV2?.maxVariantPrice?.amount);
+            const currencyCode = String(
+                product?.priceRangeV2?.minVariantPrice?.currencyCode
+                || product?.priceRangeV2?.maxVariantPrice?.currencyCode
+                || 'USD'
+            ).trim().toUpperCase();
+
+            const formatter = amount => {
+                if (!Number.isFinite(amount)) {
+                    return '';
+                }
+
+                try {
+                    return new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: currencyCode,
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2
+                    }).format(amount);
+                } catch (error) {
+                    return `${currencyCode} ${amount}`;
+                }
+            };
+
+            if (Number.isFinite(minPrice) && Number.isFinite(maxPrice)) {
+                if (minPrice === maxPrice) {
+                    return formatter(minPrice);
+                }
+                return `${formatter(minPrice)} - ${formatter(maxPrice)}`;
+            }
+
+            return '价格待确认';
+        }
+
+        function stripHtmlToPlainText(value) {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = String(value || '');
+            return (wrapper.textContent || wrapper.innerText || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function truncateText(text, maxLength = 140) {
+            const normalized = String(text || '').trim();
+            if (!normalized || normalized.length <= maxLength) {
+                return normalized;
+            }
+            return `${normalized.slice(0, maxLength - 1)}…`;
+        }
+
+        function renderProductsMessage(message) {
+            const products = normalizeProductsPayload(message);
+            if (!Array.isArray(products) || products.length === 0) {
+                return '';
+            }
+
+            return renderStructuredCard(
+                `商品列表（${products.length}）`,
+                `
+                    <div class="chat-product-list">
+                        ${products.map(product => {
+                            const productTitle = String(product?.title || '未命名商品').trim();
+                            const productUrl = sanitizeMarkdownUrl(product?.handleUrl || '');
+                            const description = truncateText(stripHtmlToPlainText(product?.description));
+                            return `
+                                <article class="chat-product-card">
+                                    ${product?.featuredImage?.url ? `
+                                        <img
+                                            class="chat-product-image"
+                                            src="${escapeHtml(product.featuredImage.url)}"
+                                            alt="${escapeHtml(productTitle)}"
+                                            loading="lazy"
+                                            referrerpolicy="no-referrer"
+                                        >
+                                    ` : ''}
+                                    <div class="chat-product-body">
+                                        <div class="chat-product-header">
+                                            <div class="chat-product-title">${escapeHtml(productTitle)}</div>
+                                            <div class="chat-product-price">${escapeHtml(formatProductPrice(product))}</div>
+                                        </div>
+                                        <div class="chat-product-meta">
+                                            <span>${escapeHtml(product?.vendor || '未知品牌')}</span>
+                                            <span>${escapeHtml(product?.productType || '未分类')}</span>
+                                            <span>库存 ${escapeHtml(String(product?.totalInventory ?? '未知'))}</span>
+                                        </div>
+                                        ${description ? `<div class="chat-product-desc">${escapeHtml(description)}</div>` : ''}
+                                        ${productUrl ? `<a class="chat-product-link" href="${escapeHtml(productUrl)}" target="_blank" rel="noopener noreferrer">查看商品</a>` : ''}
+                                    </div>
+                                </article>
+                            `;
+                        }).join('')}
+                    </div>
+                `,
+                'tone-human-soft'
+            );
+        }
+
+        function renderStructuredMessageContent(message, messageType) {
+            switch (String(messageType || '').trim().toUpperCase()) {
+                case 'MERCHANT_EMAIL_FORM':
+                    return renderMerchantEmailFormMessage(message);
+                case 'CUSTOMER_EMAIL_FORM':
+                    return renderCustomerEmailFormMessage(message);
+                case 'PRODUCTS':
+                    return renderProductsMessage(message);
+                default:
+                    return '';
+            }
+        }
+
+        function renderSessionMessageBody(message, messageType) {
+            if (isTextLikeMessageType(messageType)) {
+                return renderMessageContent(message?.content, { showPlaceholder: true });
+            }
+
+            const structuredHtml = renderStructuredMessageContent(message, messageType);
+            if (structuredHtml) {
+                return structuredHtml;
+            }
+
+            return renderMessageContent(message?.content, { showPlaceholder: false });
+        }
+
+        function resolveChatRoleLabel(message) {
+            const from = String(message?.from || '').trim().toUpperCase();
+            if (from === 'CUSTOMER') {
+                return normalizeBooleanValue(message?.isHuman) === true ? '人工' : 'AI';
+            }
+            return '用户';
         }
 
         function initEnvSelector() {
@@ -2023,16 +2340,20 @@
         function renderSessionMessageItem(message) {
             const messageType = String(message?.type || '').trim().toUpperCase();
             if (messageType === 'TIP') {
+                const tipContent = String(message?.content ?? '').trim();
+                if (!tipContent) {
+                    return '';
+                }
                 return `
                     <div class="chat-tip-row">
-                        <span class="chat-tip-bubble">${escapeHtml(message?.content || '-')}</span>
+                        <span class="chat-tip-bubble">${escapeHtml(tipContent)}</span>
                     </div>
                 `;
             }
 
             const from = String(message?.from || '').trim().toUpperCase();
             const isRight = from === 'CUSTOMER';
-            const roleLabel = isRight ? '客服' : '用户';
+            const roleLabel = resolveChatRoleLabel(message);
             const wrapperClass = isRight ? 'chat-row right' : 'chat-row left';
             const bubbleClass = isRight ? 'chat-bubble service' : 'chat-bubble user';
             const messageTypeLabel = formatMessageTypeLabel(messageType || message?.type || '-');
@@ -2040,6 +2361,7 @@
             const faqHtml = renderFaqList(message?.faq);
             const picturesHtml = renderMessagePictures(message?.pictures);
             const rawPayload = buildMessageRawPayload(message);
+            const messageBodyHtml = renderSessionMessageBody(message, messageType);
 
             return `
                 <div class="${wrapperClass}">
@@ -2050,7 +2372,7 @@
                             <span class="chat-time">${escapeHtml(formatDisplayTime(message?.createDt || '-'))}</span>
                         </div>
                         <div class="${bubbleClass}">
-                            <div class="chat-message-content">${renderMessageContent(message?.content || '-')}</div>
+                            ${messageBodyHtml ? `<div class="chat-message-content">${messageBodyHtml}</div>` : ''}
                             ${picturesHtml}
                             ${faqHtml}
                             ${rawPayload ? `
@@ -2160,6 +2482,9 @@
             }
             if (message?.products !== null && message?.products !== undefined) {
                 payload.products = message.products;
+            }
+            if (isStructuredMessageType(message?.type) && String(message?.content ?? '').trim()) {
+                payload.content = parseJsonSafely(message.content) ?? message.content;
             }
 
             return Object.keys(payload).length > 0 ? payload : null;
