@@ -7,7 +7,8 @@
         // 接口路径
         const API_PATHS = {
             fetchAllMerchant: '/aipusaasapi/test/merchant/list',
-            queryMessage: '/aipusaasapi/test/selectMessageDetail',
+            queryMessage: '/aipusaasapi/test/session/list',
+            sessionMessageList: '/aipusaasapi/test/message/list',
             getAiAssistant: '/aipusaasapi/test/getAiAssistant',
             fetchMerchantInfo: '/aipusaasapi/test/fetchMerchantInfo',
             getSessionUserInfo: '/aipusaasapi/test/queryExternalUserBySession',
@@ -23,6 +24,7 @@
         const API = {
             fetchAllMerchant: '',
             queryMessage: '',
+            sessionMessageList: '',
             getAiAssistant: '',
             fetchMerchantInfo: '',
             getSessionUserInfo: '',
@@ -36,38 +38,87 @@
 
         const ENV_STORAGE_KEY = 'aura_env';
         const GUIDE_DOC_PATH = 'aura_tool/GUIDE.md';
-        const GUIDE_VERSION = '2026.03.31-1';
+        const GUIDE_VERSION = '2026.04.01-14';
         const GUIDE_ANNOUNCEMENT_STORAGE_KEY = 'aura_tool_guide_announcement_seen_version';
         const GUIDE_UPDATE_HIGHLIGHTS = [
-            '统计数据分类占比看板改为按数量倒序排列，优先看到量级最大的分类。',
-            '分类数量相同时，再按占比倒序和分类名称稳定排序，避免顺序抖动。',
-            '操作指南已同步补充统计看板排序说明。'
+            '会话 UI 图例弹层改成稳定可滚动，首次强制展示时也能完整查看。',
+            '环境选择也移到左侧边栏，页面主区域只保留当前工具表单。',
+            '会话标签说明改成直接对应 feedbackStatus、isTurnHuman、tagName。'
         ];
+        const SESSION_UI_GUIDE_MARKER = ':::session-ui-guide:::';
+        const SESSION_UI_GUIDE_STEPS = [
+            {
+                title: '第 1 步：先选环境和工具，再填条件',
+                summary: '先在左侧确认环境并点“会话查询”，再填写商户、开始时间、结束时间；其他字段都是可选筛选项。',
+                notes: [
+                    { title: '左侧先看环境，再切工具', desc: '环境选择和“会话查询”“人设查询”“店铺数据查询”“统计数据”都在左侧边栏。' },
+                    { title: '商户 + 开始时间 + 结束时间必填', desc: '这 3 个字段填完整后，再点“查询会话”。' },
+                    { title: '其余 3 个标签只是附加过滤', desc: '“反馈状态”“是否转人工”“Email”只在你想缩小结果时再填。' }
+                ]
+            },
+            {
+                title: '第 2 步：会话卡片标签怎么读',
+                summary: '列表标签只对应 3 个字段，直接按字段理解，不要混着看。',
+                notes: [
+                    { title: 'feedbackStatus', desc: '状态标签直接显示反馈状态值，比如“AI处理中”“未解决”“人工介入结束”。' },
+                    { title: 'isTurnHuman', desc: '只有 `isTurnHuman = true` 才会出现橙色标签“要求转人工”。' },
+                    { title: 'tagName', desc: '灰色标签就是分类标签；`tagName` 为空时统一显示 `Uncategoried`。' }
+                ]
+            },
+            {
+                title: '第 3 步：右侧详情只看 3 个位置',
+                summary: '先看消息头，再看正文，最后按需要点右上角“查询用户信息”。',
+                notes: [
+                    { title: '消息头', desc: '每条消息头部都会显示“角色 + 消息类型 + 时间”。' },
+                    { title: '正文区', desc: '聊天正文在气泡里，支持 Markdown；原始内容只在需要追字段时再展开。' },
+                    { title: '查询用户信息', desc: '右上角按钮就是查当前会话用户信息，不需要切出去。' }
+                ]
+            }
+        ];
+        const SESSION_PAGE_SIZE = 20;
+        const FEEDBACK_STATUS_OPTIONS = [
+            { value: 'AI_PROCESSING', label: 'AI处理中' },
+            { value: 'AI_SOLVED', label: '已解决' },
+            { value: 'AI_NOT_SOLVED', label: '未解决' },
+            { value: 'MANUAL_INTERVENTION', label: '人工介入' },
+            { value: 'MANUAL_INTERVENTION_END', label: '人工介入结束' }
+        ];
+        const FEEDBACK_STATUS_LABEL_MAP = FEEDBACK_STATUS_OPTIONS.reduce((acc, item) => {
+            acc[item.value] = item.label;
+            return acc;
+        }, {});
         let currentEnv = 'sit';
         let currentModule = 'message';
 
         // 商户缓存
         let merchantList = [];
 
-        // 当前查询消息时使用的商户ID(用于会话用户信息查询)
+        // 当前查询会话时使用的商户ID(用于会话用户信息查询)
         let currentQueryMerchantId = null;
-
-        // 会话详情数据缓存
-        const sessionDetailsCache = new Map();
 
         // JSON 数据缓存(用于复制功能)
         const jsonDataCache = new Map();
 
         // 当前统计看板导出上下文(用于导出饼图分类占比)
         let currentStatisticsExportContext = null;
+        let activeUserInfoTrigger = null;
+
+        // 会话查询上下文
+        let sessionQueryState = createDefaultSessionQueryState();
+        let latestSessionQueryToken = 0;
+        let currentSessionDetailState = createDefaultSessionDetailState();
+        let latestSessionDetailToken = 0;
 
         // 操作指南缓存
         let guideHtmlCache = '';
+        let currentSessionUiGuideStep = 0;
+        let guideModalState = createDefaultGuideModalState();
 
         // 页面加载时初始化
         window.addEventListener('DOMContentLoaded', () => {
             initEnvSelector();
             initDateTimeInputs();
+            initFeedbackStatusOptions();
             bindMerchantEvents();
             bindModuleNavEvents();
             initGuideExperience();
@@ -97,21 +148,67 @@
             return `${year}-${month}-${day}T${hours}:${minutes}`;
         }
 
+        function createDefaultSessionQueryState() {
+            return {
+                merchantId: '',
+                merchantName: '',
+                startTime: '',
+                endTime: '',
+                email: '',
+                feedbackStatus: '',
+                isTurnHuman: '',
+                page: 1,
+                pageSize: SESSION_PAGE_SIZE,
+                total: 0,
+                currentPageList: []
+            };
+        }
+
+        function createDefaultSessionDetailState() {
+            return {
+                selectedSessionId: '',
+                selectedSession: null,
+                loading: false,
+                error: '',
+                messages: []
+            };
+        }
+
+        function createDefaultGuideModalState() {
+            return {
+                mode: 'document',
+                markSeenOnClose: false,
+                showUpdateHighlights: false
+            };
+        }
+
+        function initFeedbackStatusOptions() {
+            const feedbackStatusSelect = document.getElementById('feedbackStatus');
+            if (!feedbackStatusSelect) {
+                return;
+            }
+
+            const currentValue = feedbackStatusSelect.value || '';
+            feedbackStatusSelect.innerHTML = `
+                <option value="">全部</option>
+                ${FEEDBACK_STATUS_OPTIONS.map(item => `
+                    <option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>
+                `).join('')}
+            `;
+            feedbackStatusSelect.value = currentValue;
+        }
+
         function initGuideExperience() {
+            const guideModalTitle = document.getElementById('guideModalTitle');
             const guideVersionText = document.getElementById('guideVersionText');
-            const announcementVersion = document.getElementById('guideAnnouncementVersion');
+
+            if (guideModalTitle) {
+                guideModalTitle.textContent = 'Aura 工具操作指南';
+            }
 
             if (guideVersionText) {
                 guideVersionText.textContent = `文档版本：${GUIDE_VERSION}`;
             }
-
-            if (announcementVersion) {
-                announcementVersion.textContent = `更新版本：${GUIDE_VERSION}`;
-            }
-
-            renderGuideAnnouncementBody();
-            loadGuideContent();
-            maybeShowGuideAnnouncement();
 
             document.addEventListener('keydown', handleGlobalEscape);
 
@@ -123,18 +220,21 @@
                     }
                 });
             }
+
+            maybeForceShowSessionUiGuide();
         }
 
         async function loadGuideContent(forceReload = false) {
             const guideContent = document.getElementById('guideContent');
             if (!guideContent) return;
+            currentSessionUiGuideStep = 0;
 
             if (guideHtmlCache && !forceReload) {
-                guideContent.innerHTML = guideHtmlCache;
+                renderContentWithTransition(guideContent, guideHtmlCache);
                 return;
             }
 
-            guideContent.innerHTML = '<div class="popover-loading">加载中...</div>';
+            guideContent.innerHTML = buildInlineLoadingMarkup('加载指南中...');
 
             try {
                 const response = await fetch(`${GUIDE_DOC_PATH}?v=${encodeURIComponent(GUIDE_VERSION)}`, {
@@ -146,77 +246,100 @@
                 }
 
                 const markdown = await response.text();
-                guideHtmlCache = `<div class="guide-markdown">${renderMarkdown(markdown)}</div>`;
-                guideContent.innerHTML = guideHtmlCache;
+                guideHtmlCache = buildGuideDocumentHtml(markdown);
+                renderContentWithTransition(guideContent, guideHtmlCache);
             } catch (error) {
                 console.error('Failed to load guide document:', error);
-                guideContent.innerHTML = `
+                renderContentWithTransition(guideContent, `
                     <div class="guide-load-error">
                         操作指南加载失败：${escapeHtml(error.message)}
                     </div>
-                `;
+                `);
             }
         }
 
-        function renderGuideAnnouncementBody() {
-            const container = document.getElementById('guideAnnouncementBody');
-            if (!container) return;
-
-            const listHtml = GUIDE_UPDATE_HIGHLIGHTS.map(item => `<li>${escapeHtml(item)}</li>`).join('');
-            container.innerHTML = `
-                <div>本次更新内容：</div>
-                <ul>${listHtml}</ul>
-            `;
-        }
-
-        function maybeShowGuideAnnouncement() {
-            const announcement = document.getElementById('guideAnnouncement');
-            if (!announcement) return;
-
-            let seenVersion = '';
+        function hasSeenCurrentGuideVersion() {
             try {
-                seenVersion = localStorage.getItem(GUIDE_ANNOUNCEMENT_STORAGE_KEY) || '';
+                return (localStorage.getItem(GUIDE_ANNOUNCEMENT_STORAGE_KEY) || '') === GUIDE_VERSION;
             } catch (error) {
-                console.warn('Unable to read guide announcement version from localStorage:', error);
+                console.warn('Unable to read guide version from localStorage:', error);
+                return false;
             }
-
-            if (seenVersion === GUIDE_VERSION) {
-                return;
-            }
-
-            announcement.classList.add('active');
         }
 
-        function dismissGuideAnnouncement() {
-            const announcement = document.getElementById('guideAnnouncement');
-            if (announcement) {
-                announcement.classList.remove('active');
-            }
-
+        function markCurrentGuideVersionAsSeen() {
             try {
                 localStorage.setItem(GUIDE_ANNOUNCEMENT_STORAGE_KEY, GUIDE_VERSION);
             } catch (error) {
-                console.warn('Unable to persist guide announcement version:', error);
+                console.warn('Unable to persist guide version:', error);
             }
         }
 
-        function openGuideFromAnnouncement() {
-            dismissGuideAnnouncement();
-            openGuideModal();
+        function maybeForceShowSessionUiGuide() {
+            if (hasSeenCurrentGuideVersion()) {
+                return;
+            }
+
+            openSessionUiGuideModal({
+                markSeenOnClose: true,
+                showUpdateHighlights: true
+            });
         }
 
         function openGuideModal() {
+            guideModalState = createDefaultGuideModalState();
+            updateGuideModalMeta('Aura 工具操作指南');
+
             const overlay = document.getElementById('guideModalOverlay');
             if (!overlay) return;
 
+            currentSessionUiGuideStep = 0;
             overlay.classList.add('active');
             loadGuideContent();
+        }
+
+        function openSessionUiGuideModal(options = {}) {
+            guideModalState = {
+                mode: 'session-ui',
+                markSeenOnClose: Boolean(options.markSeenOnClose),
+                showUpdateHighlights: Boolean(options.showUpdateHighlights)
+            };
+            updateGuideModalMeta('会话 UI 图例');
+
+            const overlay = document.getElementById('guideModalOverlay');
+            const guideContent = document.getElementById('guideContent');
+            if (!overlay || !guideContent) return;
+
+            currentSessionUiGuideStep = 0;
+            overlay.classList.add('active');
+            renderContentWithTransition(guideContent, buildSessionUiGuideStandaloneHtml());
+        }
+
+        function updateGuideModalMeta(title) {
+            const guideModalTitle = document.getElementById('guideModalTitle');
+            const guideVersionText = document.getElementById('guideVersionText');
+
+            if (guideModalTitle) {
+                guideModalTitle.textContent = title;
+            }
+
+            if (guideVersionText) {
+                const prefix = title === '会话 UI 图例' ? '图例版本' : '文档版本';
+                guideVersionText.textContent = `${prefix}：${GUIDE_VERSION}`;
+            }
         }
 
         function closeGuideModal() {
             const overlay = document.getElementById('guideModalOverlay');
             if (!overlay) return;
             overlay.classList.remove('active');
+
+            if (guideModalState.markSeenOnClose) {
+                markCurrentGuideVersionAsSeen();
+            }
+
+            guideModalState = createDefaultGuideModalState();
+            updateGuideModalMeta('Aura 工具操作指南');
         }
 
         function handleGlobalEscape(event) {
@@ -226,6 +349,273 @@
 
             closeGuideModal();
             closeUserInfoPopover();
+        }
+
+        function buildGuideDocumentHtml(markdown) {
+            const normalizedMarkdown = String(markdown || '');
+            const segments = normalizedMarkdown.split(SESSION_UI_GUIDE_MARKER);
+
+            if (segments.length === 1) {
+                return `<div class="guide-markdown">${renderMarkdown(normalizedMarkdown)}</div>`;
+            }
+
+            return segments.map((segment, index) => {
+                const renderedSegment = segment.trim()
+                    ? `<div class="guide-markdown">${renderMarkdown(segment)}</div>`
+                    : '';
+
+                if (index >= segments.length - 1) {
+                    return renderedSegment;
+                }
+
+                return `${renderedSegment}${renderSessionUiGuideSection()}`;
+            }).join('');
+        }
+
+        function buildSessionUiGuideStandaloneHtml() {
+            const updateBanner = guideModalState.showUpdateHighlights
+                ? renderGuideUpdateHighlights()
+                : '';
+
+            return `
+                <div class="guide-standalone">
+                    ${updateBanner}
+                    ${renderSessionUiGuideSection()}
+                </div>
+            `;
+        }
+
+        function renderGuideUpdateHighlights() {
+            const listHtml = GUIDE_UPDATE_HIGHLIGHTS
+                .map(item => `<li>${escapeHtml(item)}</li>`)
+                .join('');
+
+            return `
+                <section class="guide-update-banner">
+                    <div class="guide-update-banner-title">本次更新重点</div>
+                    <div class="guide-update-banner-version">版本：${escapeHtml(GUIDE_VERSION)}</div>
+                    <ul class="guide-update-banner-list">${listHtml}</ul>
+                </section>
+            `;
+        }
+
+        function renderSessionUiGuideSection() {
+            const step = SESSION_UI_GUIDE_STEPS[currentSessionUiGuideStep] || SESSION_UI_GUIDE_STEPS[0];
+            const totalSteps = SESSION_UI_GUIDE_STEPS.length;
+
+            return `
+                <section class="session-ui-guide" data-session-ui-guide>
+                    <div class="session-ui-guide-panel">
+                        <div class="session-ui-guide-head">
+                            <div>
+                                <div class="session-ui-guide-eyebrow">会话查询 UI 指南</div>
+                                <div class="session-ui-guide-title">${escapeHtml(step.title)}</div>
+                                <div class="session-ui-guide-summary">${escapeHtml(step.summary)}</div>
+                            </div>
+                            <div class="session-ui-guide-progress">${currentSessionUiGuideStep + 1} / ${totalSteps}</div>
+                        </div>
+                        <div class="session-ui-guide-stage">
+                            <div class="session-ui-guide-preview">
+                                ${renderSessionUiGuidePreview(currentSessionUiGuideStep)}
+                            </div>
+                            <div class="session-ui-guide-notes">
+                                ${step.notes.map((note, index) => `
+                                    <div class="session-ui-guide-note">
+                                        <div class="session-ui-guide-note-index">${index + 1}</div>
+                                        <div>
+                                            <div class="session-ui-guide-note-title">${escapeHtml(note.title)}</div>
+                                            <div class="session-ui-guide-note-desc">${escapeHtml(note.desc)}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="session-ui-guide-footer">
+                            <div class="session-ui-guide-dots">
+                                ${SESSION_UI_GUIDE_STEPS.map((_, index) => `
+                                    <button
+                                        type="button"
+                                        class="session-ui-guide-dot ${index === currentSessionUiGuideStep ? 'active' : ''}"
+                                        onclick="goToSessionUiGuideStep(${index})"
+                                        aria-label="查看第 ${index + 1} 步"
+                                    ></button>
+                                `).join('')}
+                            </div>
+                            <div class="session-ui-guide-actions">
+                                <button
+                                    type="button"
+                                    class="session-ui-guide-btn"
+                                    onclick="prevSessionUiGuideStep()"
+                                    ${currentSessionUiGuideStep === 0 ? 'disabled' : ''}
+                                >上一步</button>
+                                <button
+                                    type="button"
+                                    class="session-ui-guide-btn primary"
+                                    onclick="nextSessionUiGuideStep()"
+                                >${currentSessionUiGuideStep === totalSteps - 1 ? '回到第 1 张' : '下一张 ▶'}</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderSessionUiGuidePreview(stepIndex) {
+            if (stepIndex === 0) {
+                return `
+                    <div class="session-ui-mock session-ui-mock-form">
+                        <div class="session-ui-mock-layout">
+                            <div class="session-ui-mock-sidebar">
+                                <span class="session-ui-mock-nav-item active">会话查询</span>
+                                <span class="session-ui-mock-nav-item">人设查询</span>
+                                <span class="session-ui-mock-nav-item">店铺数据查询</span>
+                                <span class="session-ui-mock-nav-item">统计数据</span>
+                            </div>
+                            <div class="session-ui-mock-main">
+                                <div class="session-ui-form-card session-ui-focus">
+                                    <div class="session-ui-form-field full">
+                                        <span class="session-ui-field-label">选择商户</span>
+                                        <span class="session-ui-field-value">sitLuckmoda3-test</span>
+                                    </div>
+                                    <div class="session-ui-form-grid">
+                                        <div class="session-ui-form-field session-ui-focus-soft">
+                                            <span class="session-ui-field-label">开始时间</span>
+                                            <span class="session-ui-field-value">2026/03/30 00:00</span>
+                                        </div>
+                                        <div class="session-ui-form-field session-ui-focus-soft">
+                                            <span class="session-ui-field-label">结束时间</span>
+                                            <span class="session-ui-field-value">2026/04/01 16:30</span>
+                                        </div>
+                                    </div>
+                                    <div class="session-ui-form-grid dimmed">
+                                        <div class="session-ui-form-field">
+                                            <span class="session-ui-field-label">反馈状态（可选）</span>
+                                            <span class="session-ui-field-value">全部</span>
+                                        </div>
+                                        <div class="session-ui-form-field">
+                                            <span class="session-ui-field-label">是否转人工（可选）</span>
+                                            <span class="session-ui-field-value">全部</span>
+                                        </div>
+                                    </div>
+                                    <div class="session-ui-form-field full dimmed">
+                                        <span class="session-ui-field-label">Email（可选）</span>
+                                        <span class="session-ui-field-value empty">例如：PJY2077@gmail.com</span>
+                                    </div>
+                                    <div class="session-ui-form-actions">
+                                        <button type="button" class="session-ui-cta">查询会话</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (stepIndex === 1) {
+                return `
+                    <div class="session-ui-mock session-ui-mock-list">
+                        <div class="session-ui-list-shell">
+                            <div class="session-ui-list-title">会话列表</div>
+                            <div class="session-ui-list-card dimmed">
+                                <div class="session-ui-list-line strong">1920 <span>|</span> 2077pjy@gmail.com</div>
+                                <div class="session-ui-chip-row">
+                                    <span class="session-ui-chip blue">AI处理中</span>
+                                    <span class="session-ui-chip gray">Uncategoried</span>
+                                </div>
+                            </div>
+                            <div class="session-ui-list-card focus">
+                                <div class="session-ui-list-line strong">1889 <span>|</span> user_dfa79</div>
+                                <div class="session-ui-chip-row">
+                                    <span class="session-ui-chip slate">人工介入结束</span>
+                                    <span class="session-ui-chip orange">要求转人工</span>
+                                    <span class="session-ui-chip gray">Uncategoried</span>
+                                </div>
+                                <div class="session-ui-list-line meta">lastChatTime 2026-03-31 15:27:08 | createDt 2026-03-31 15:07:01</div>
+                            </div>
+                            <div class="session-ui-list-card dimmed">
+                                <div class="session-ui-list-line strong">1862 <span>|</span> user_1b4fd</div>
+                                <div class="session-ui-chip-row">
+                                    <span class="session-ui-chip red">未解决</span>
+                                    <span class="session-ui-chip gray">Check Order Status</span>
+                                </div>
+                            </div>
+                            <div class="session-ui-pagination dimmed">
+                                <span>共 8 条</span>
+                                <div class="session-ui-pagination-btns">
+                                    <span class="session-ui-page-btn">上一页</span>
+                                    <span class="session-ui-page-btn active">1</span>
+                                    <span class="session-ui-page-btn">下一页</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="session-ui-mock session-ui-mock-detail">
+                    <div class="session-ui-detail-shell">
+                        <div class="session-ui-detail-header">
+                            <div class="session-ui-detail-title">会话详情</div>
+                            <button type="button" class="session-ui-detail-btn">查询用户信息</button>
+                        </div>
+                        <div class="session-ui-chat-row right dimmed">
+                            <div class="session-ui-meta-row">
+                                <span class="session-ui-chip green">客服</span>
+                                <span class="session-ui-chip gray">文字</span>
+                                <span class="session-ui-time">2026-03-31 15:07:01</span>
+                            </div>
+                            <div class="session-ui-bubble service">Ah welcome! I’m your Wardrobe Whisperer...</div>
+                        </div>
+                        <div class="session-ui-chat-row left focus">
+                            <div class="session-ui-meta-row">
+                                <span class="session-ui-chip blue">用户</span>
+                                <span class="session-ui-chip gray">文字</span>
+                                <span class="session-ui-time">2026-03-31 15:07:08</span>
+                            </div>
+                            <div class="session-ui-bubble user">转人工</div>
+                        </div>
+                        <div class="session-ui-chat-row right focus-soft">
+                            <div class="session-ui-meta-row">
+                                <span class="session-ui-chip green">客服</span>
+                                <span class="session-ui-chip gold">商户联系邮箱表单</span>
+                                <span class="session-ui-time">2026-03-31 15:07:14</span>
+                            </div>
+                            <div class="session-ui-bubble service">展开原始内容</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateSessionUiGuideSection() {
+            const currentGuide = document.querySelector('#guideContent [data-session-ui-guide]');
+            if (!currentGuide) {
+                return;
+            }
+            currentGuide.outerHTML = renderSessionUiGuideSection();
+        }
+
+        function goToSessionUiGuideStep(stepIndex) {
+            const totalSteps = SESSION_UI_GUIDE_STEPS.length;
+            currentSessionUiGuideStep = Math.min(Math.max(Number(stepIndex) || 0, 0), totalSteps - 1);
+            updateSessionUiGuideSection();
+        }
+
+        function prevSessionUiGuideStep() {
+            if (currentSessionUiGuideStep <= 0) {
+                return;
+            }
+            goToSessionUiGuideStep(currentSessionUiGuideStep - 1);
+        }
+
+        function nextSessionUiGuideStep() {
+            const totalSteps = SESSION_UI_GUIDE_STEPS.length;
+            if (currentSessionUiGuideStep >= totalSteps - 1) {
+                goToSessionUiGuideStep(0);
+                return;
+            }
+            goToSessionUiGuideStep(currentSessionUiGuideStep + 1);
         }
 
         function renderMarkdown(markdown, options = {}) {
@@ -433,6 +823,7 @@
             const baseUrl = ENV_CONFIG[currentEnv];
             API.fetchAllMerchant = API_PATHS.fetchAllMerchant ? `${baseUrl}${API_PATHS.fetchAllMerchant}` : '';
             API.queryMessage = API_PATHS.queryMessage ? `${baseUrl}${API_PATHS.queryMessage}` : '';
+            API.sessionMessageList = API_PATHS.sessionMessageList ? `${baseUrl}${API_PATHS.sessionMessageList}` : '';
             API.getAiAssistant = API_PATHS.getAiAssistant ? `${baseUrl}${API_PATHS.getAiAssistant}` : '';
             API.fetchMerchantInfo = API_PATHS.fetchMerchantInfo ? `${baseUrl}${API_PATHS.fetchMerchantInfo}` : '';
             API.getSessionUserInfo = API_PATHS.getSessionUserInfo ? `${baseUrl}${API_PATHS.getSessionUserInfo}` : '';
@@ -449,6 +840,9 @@
             // 清除消息查询模块的商户选择
             document.getElementById('merchantInput').value = '';
             document.getElementById('merchantId').value = '';
+            document.getElementById('feedbackStatus').value = '';
+            document.getElementById('isTurnHuman').value = '';
+            document.getElementById('email').value = '';
             const merchantDropdown = document.getElementById('merchantDropdown');
             merchantDropdown.style.display = 'none';
             merchantDropdown.innerHTML = '';
@@ -473,6 +867,9 @@
             // 清空结果和错误
             document.getElementById('results').innerHTML = '';
             currentStatisticsExportContext = null;
+            currentQueryMerchantId = null;
+            sessionQueryState = createDefaultSessionQueryState();
+            currentSessionDetailState = createDefaultSessionDetailState();
             hideError();
         }
 
@@ -530,10 +927,10 @@
         }
 
         function bindModuleNavEvents() {
-            const moduleCards = document.querySelectorAll('.module-card');
-            moduleCards.forEach(card => {
-                card.addEventListener('click', () => {
-                    const module = card.getAttribute('data-module');
+            const moduleNavItems = document.querySelectorAll('.module-nav-item');
+            moduleNavItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const module = item.getAttribute('data-module');
                     switchModule(module);
                 });
             });
@@ -544,12 +941,11 @@
 
             currentModule = module;
 
-            // 更新导航卡片样式
-            document.querySelectorAll('.module-card').forEach(card => {
-                card.classList.remove('active');
-                if (card.getAttribute('data-module') === module) {
-                    card.classList.add('active');
-                }
+            // 更新左侧工具栏样式
+            document.querySelectorAll('.module-nav-item').forEach(item => {
+                const isActive = item.getAttribute('data-module') === module;
+                item.classList.toggle('active', isActive);
+                item.setAttribute('aria-selected', isActive ? 'true' : 'false');
             });
 
             // 切换表单显示
@@ -681,6 +1077,8 @@
             let merchantId = document.getElementById('merchantId').value;
             const startTimeInput = document.getElementById('startTime').value;
             const endTimeInput = document.getElementById('endTime').value;
+            const feedbackStatus = document.getElementById('feedbackStatus').value.trim();
+            const isTurnHuman = document.getElementById('isTurnHuman').value;
             const email = document.getElementById('email').value.trim();
 
             if (!merchantId && merchantInputValue) {
@@ -720,49 +1118,128 @@
             }
 
             if (!API.queryMessage) {
-                showError('请先配置消息查询接口');
+                showError('请先配置会话查询接口');
                 return;
             }
 
             const startTimeStr = convertDateTimeFormat(startTimeInput);
             const endTimeStr = convertDateTimeFormat(endTimeInput);
 
-            showLoading(true);
-            hideError();
-
             // 保存当前商户ID，用于会话用户信息查询
             currentQueryMerchantId = merchantId;
 
+            const matchedMerchant = merchantList.find(item => String(item.merchantId) === String(merchantId));
+            sessionQueryState = {
+                merchantId: String(merchantId),
+                merchantName: matchedMerchant?.merchantName || merchantInputValue || String(merchantId),
+                startTime: startTimeStr,
+                endTime: endTimeStr,
+                email,
+                feedbackStatus,
+                isTurnHuman,
+                page: 1,
+                pageSize: SESSION_PAGE_SIZE,
+                total: 0
+            };
+
+            await fetchSessionListPage(sessionQueryState);
+        }
+
+        async function fetchSessionListPage(queryState) {
+            const requestToken = ++latestSessionQueryToken;
+            const requestBody = {
+                merchantId: Number(queryState.merchantId),
+                startTime: queryState.startTime,
+                endTime: queryState.endTime,
+                needFold: false,
+                page: Number(queryState.page) || 1,
+                pageSize: Number(queryState.pageSize) || SESSION_PAGE_SIZE
+            };
+
+            if (queryState.feedbackStatus) {
+                requestBody.feedbackStatus = queryState.feedbackStatus;
+            }
+
+            if (queryState.email) {
+                requestBody.email = queryState.email;
+            }
+
+            if (queryState.isTurnHuman !== '') {
+                requestBody.isTurnHuman = queryState.isTurnHuman === 'true';
+            }
+
+            showLoading(true);
+            hideError();
+
             try {
-                const params = new URLSearchParams({
-                    merchantId: merchantId,
-                    startTime: startTimeStr,
-                    endTime: endTimeStr
+                const response = await fetch(API.queryMessage, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
                 });
-
-                if (email) {
-                    params.append('email', email);
-                }
-
-                const url = `${API.queryMessage}?${params.toString()}`;
-                const response = await fetch(url);
-                console.log('Raw response:', response);
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
-                console.log('Response data:', data);
+                const result = normalizeApiResult(data, '会话查询');
+                const total = Number(result?.total) || 0;
+                const list = Array.isArray(result?.list) ? result.list : [];
 
-                const messages = data.result || [];
-                displayMessages(messages);
+                if (requestToken !== latestSessionQueryToken) {
+                    return;
+                }
+
+                sessionQueryState = {
+                    ...queryState,
+                    total,
+                    page: requestBody.page,
+                    pageSize: requestBody.pageSize,
+                    currentPageList: list
+                };
+
+                displayMessages({
+                    list,
+                    total,
+                    page: requestBody.page,
+                    pageSize: requestBody.pageSize,
+                    queryMeta: {
+                        merchantId: queryState.merchantId,
+                        merchantName: queryState.merchantName,
+                        startTime: queryState.startTime,
+                        endTime: queryState.endTime,
+                        feedbackStatus: queryState.feedbackStatus,
+                        isTurnHuman: queryState.isTurnHuman
+                    }
+                });
             } catch (error) {
-                console.error('Error fetching messages:', error);
-                showError(`查询失败: ${error.message}`);
+                console.error('Error fetching sessions:', error);
+                if (requestToken === latestSessionQueryToken) {
+                    showError(`查询失败: ${error.message}`);
+                }
             } finally {
-                showLoading(false);
+                if (requestToken === latestSessionQueryToken) {
+                    showLoading(false);
+                }
             }
+        }
+
+        async function goToSessionPage(page) {
+            if (!sessionQueryState.merchantId) {
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil((sessionQueryState.total || 0) / (sessionQueryState.pageSize || SESSION_PAGE_SIZE)));
+            const nextPage = Math.min(Math.max(Number(page) || 1, 1), totalPages);
+            sessionQueryState = {
+                ...sessionQueryState,
+                page: nextPage
+            };
+
+            await fetchSessionListPage(sessionQueryState);
         }
 
         async function fetchStatistics() {
@@ -1091,7 +1568,7 @@
                 </div>
             `;
 
-            resultsDiv.innerHTML = html;
+            renderResultsContent(html);
         }
 
         function formatPercentValue(value) {
@@ -1294,380 +1771,541 @@
             return `${year}${month}${day}`;
         }
 
+        function buildInlineLoadingMarkup(text = '加载中...') {
+            return `
+                <div class="popover-loading">
+                    <div class="spinner inline-loading-spinner"></div>
+                    <span>${escapeHtml(text)}</span>
+                </div>
+            `;
+        }
+
+        function renderContentWithTransition(container, html) {
+            if (!container) {
+                return;
+            }
+
+            container.innerHTML = `<div class="result-fade-enter">${html}</div>`;
+            const animatedBlock = container.firstElementChild;
+            window.requestAnimationFrame(() => {
+                animatedBlock?.classList.add('is-visible');
+            });
+        }
+
+        function renderResultsContent(html) {
+            renderContentWithTransition(document.getElementById('results'), html);
+        }
+
         // 格式化显示时间：将 T 替换为空格
         function formatDisplayTime(timeStr) {
             if (!timeStr) return 'N/A';
             return timeStr.replace('T', ' ');
         }
 
-        function displayMessages(messages) {
-            const resultsDiv = document.getElementById('results');
+        function displayMessages(payload) {
+            const list = Array.isArray(payload?.list) ? payload.list : [];
+            const total = Number(payload?.total) || 0;
+            const page = Number(payload?.page) || 1;
+            const pageSize = Number(payload?.pageSize) || SESSION_PAGE_SIZE;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-            if (!messages || messages.length === 0) {
-                resultsDiv.innerHTML = '<p>没有找到消息数据</p>';
-                return;
+            if (!currentSessionDetailState.selectedSessionId || !list.some(item => String(item?.sessionId ?? item?.id ?? '') === String(currentSessionDetailState.selectedSessionId))) {
+                currentSessionDetailState = createDefaultSessionDetailState();
+            } else if (currentSessionDetailState.selectedSessionId) {
+                currentSessionDetailState = {
+                    ...currentSessionDetailState,
+                    selectedSession: list.find(item => String(item?.sessionId ?? item?.id ?? '') === String(currentSessionDetailState.selectedSessionId)) || currentSessionDetailState.selectedSession
+                };
             }
 
-            // 按 sessionId 分组
-            const groupedMessages = {};
-            messages.forEach(message => {
-                const sessionId = message.sessionId;
-                if (!groupedMessages[sessionId]) {
-                    groupedMessages[sessionId] = [];
-                }
-                groupedMessages[sessionId].push(message);
-            });
-
-            // 对每组内的消息按 id 正序排列
-            Object.keys(groupedMessages).forEach(sessionId => {
-                groupedMessages[sessionId].sort((a, b) => {
-                    const aId = a.id !== null && a.id !== undefined ? a.id : -Infinity;
-                    const bId = b.id !== null && b.id !== undefined ? b.id : -Infinity;
-                    return aId - bId;
-                });
-            });
-
-            // 提取所有 sessionId 用于批量查询
-            const sessionIds = Object.keys(groupedMessages);
-
-            // 对 sessionId 进行倒序排列
-            const sortedSessionIds = sessionIds.sort((a, b) => {
-                const aId = parseInt(a) || 0;
-                const bId = parseInt(b) || 0;
-                return bId - aId;
-            });
-
-            // 创建带 tab 的容器结构
-            let html = `
-                <div class="session-tabs-container">
-                    <div class="session-tabs">
-                        <button class="session-tab active" data-tab="all" onclick="switchSessionTab('all')">全部 (${sortedSessionIds.length})</button>
-                        <button class="session-tab" data-tab="merchant" onclick="switchSessionTab('merchant')">前台 (0)</button>
-                        <button class="session-tab" data-tab="manual" onclick="switchSessionTab('manual')">转人工 (0)</button>
-                        <button class="session-tab" data-tab="other" onclick="switchSessionTab('other')">其他 (0)</button>
-                    </div>
-                    <div class="session-tabs-content" id="sessionTabsContent">
-                `;
-
-            sortedSessionIds.forEach(sessionId => {
-                const sessionMessages = groupedMessages[sessionId];
-                const firstMessage = sessionMessages[0];
-
-                // 查找 form = CUSTOMER 的消息获取 nickname
-                const customerMessage = sessionMessages.find(msg => msg.form === 'CUSTOMER');
-                const displayNickname = customerMessage?.nickname || 'N/A';
-                const safeDisplayNickname = escapeHtml(displayNickname);
-
-                html += `
-                <div class="session" data-session-id="${sessionId}" data-scene="">
-                    <div class="session-header">
-                        <span class="session-title" onclick="toggleSessionById('${sessionId}', event)">${sessionId} | ${safeDisplayNickname} | ${escapeHtml(formatDisplayTime(firstMessage.createDt))}</span>
-                        <div class="session-actions">
-                            <button class="session-toggle-btn" onclick="toggleSessionById('${sessionId}', event)">▶ 展开</button>
-                            <button class="user-info-btn" onclick="fetchSessionUserInfo('${sessionId}', event)">查询用户信息</button>
+            renderResultsContent(`
+                <div class="session-workbench">
+                    <section class="session-workbench-panel session-workbench-list">
+                        <div class="session-workbench-header">
+                            <div class="session-workbench-title">会话列表</div>
                         </div>
+                        <div class="session-summary-list">
+                            ${list.length > 0 ? list.map(item => renderSessionSummaryCard(item)).join('') : renderSessionEmptyState()}
+                        </div>
+                        ${renderSessionPagination(page, totalPages, total)}
+                    </section>
+                    <aside class="session-workbench-panel session-workbench-detail">
+                        <div class="session-workbench-detail-body">
+                            ${renderSessionDetailPanel()}
+                        </div>
+                    </aside>
+                </div>
+            `);
+        }
+
+        function renderSessionSummaryCard(session) {
+            const sessionId = session?.sessionId ?? session?.id ?? 'N/A';
+            const username = session?.username || 'N/A';
+            const tagName = session?.tagName === null || session?.tagName === undefined || String(session?.tagName || '').trim() === ''
+                ? 'Uncategoried'
+                : String(session.tagName);
+            const feedbackValue = session?.feedbackStatus || '-';
+            const feedbackDesc = formatFeedbackStatusLabel(feedbackValue, session?.feedbackStatusDesc);
+            const turnHumanBadge = normalizeTurnHumanValue(session?.isTurnHuman)
+                ? renderSessionBadge('要求转人工', 'tone-human')
+                : '';
+            const isSelected = String(currentSessionDetailState.selectedSessionId || '') === String(sessionId);
+
+            return `
+                <article class="session-summary-card ${isSelected ? 'selected' : ''}" onclick="fetchSessionMessages('${escapeHtml(String(sessionId))}')" role="button" tabindex="0">
+                    <div class="session-summary-line session-summary-line-primary">
+                        <span class="session-summary-id">${escapeHtml(String(sessionId))}</span>
+                        <span class="session-summary-divider">|</span>
+                        <span class="session-summary-username">${escapeHtml(username)}</span>
                     </div>
-                    <div class="session-content" style="display: none;">
+                    <div class="session-summary-line session-summary-line-tags">
+                        ${renderSessionBadge(feedbackDesc, getSessionToneClass(feedbackValue, 'feedback'), feedbackValue)}
+                        ${turnHumanBadge}
+                        ${renderSessionBadge(tagName, 'tone-neutral', tagName)}
+                    </div>
+                    <div class="session-summary-line session-summary-line-meta">
+                        <span>lastChatTime ${escapeHtml(formatDisplayTime(session?.lastChatTime || '-'))}</span>
+                        <span class="session-summary-divider">|</span>
+                        <span>createDt ${escapeHtml(formatDisplayTime(session?.createDt || '-'))}</span>
+                    </div>
+                </article>
+            `;
+        }
+
+        function renderSessionDetailPanel() {
+            if (currentSessionDetailState.loading) {
+                return `
+                    <div class="session-detail-loading">
+                        <div class="spinner"></div>
+                        <span>加载会话详情中...</span>
+                    </div>
                 `;
+            }
 
-                sessionMessages.forEach(message => {
-                    const hasPictures = message.pictures && Array.isArray(message.pictures) && message.pictures.length > 0;
+            if (currentSessionDetailState.error) {
+                return `
+                    <div class="session-detail-error">
+                        <div class="empty-state-title">会话详情加载失败</div>
+                        <div class="empty-state-desc">${escapeHtml(currentSessionDetailState.error)}</div>
+                    </div>
+                `;
+            }
 
-                    let typeLabel = '';
-                    if (message.senderId != null) {
-                        typeLabel = '<span class="message-type-label label-user">用户</span>';
-                    } else if (message.replierId != null) {
-                        typeLabel = '<span class="message-type-label label-service">客服</span>';
-                    }
+            if (!currentSessionDetailState.selectedSessionId) {
+                return `
+                    <div class="session-placeholder">
+                        <div class="session-placeholder-eyebrow">Session Detail</div>
+                        <div class="session-placeholder-title">Choose a session</div>
+                        <div class="session-placeholder-desc">点击左侧会话后，右侧会按 IM 形式展示完整聊天记录。</div>
+                    </div>
+                `;
+            }
 
-                    const messageType = escapeHtml(message.type || 'N/A');
-                    const displayTime = escapeHtml(formatDisplayTime(message.createDt));
-                    const extendInfo = message.extendInfo
-                        ? escapeHtml(JSON.stringify(message.extendInfo, null, 2))
-                        : '';
+            const selectedSession = currentSessionDetailState.selectedSession || {};
+            const messages = Array.isArray(currentSessionDetailState.messages) ? currentSessionDetailState.messages : [];
+            const sessionId = selectedSession?.sessionId ?? currentSessionDetailState.selectedSessionId;
 
-                    html += `
-                        <div class="message">
-                            <div class="message-info">
-                                ${typeLabel}发送时间: ${displayTime} | 消息类型: ${messageType}
+            return `
+                <div class="session-detail-shell">
+                    <div class="session-detail-header">
+                        <div class="session-detail-header-row">
+                            <div>
+                                <div class="session-detail-title">会话详情</div>
                             </div>
-                            <div class="message-content">${renderMessageContent(message.content)}</div>
-                            ${hasPictures ? `<div class="message-pictures">${message.pictures.map(pic => `<div class="picture-item"><img src="${escapeHtml(pic)}" alt="消息图片" onclick="openModal(this.src)" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"150\" height=\"150\" viewBox=\"0 0 150 150\"><rect width=\"150\" height=\"150\" fill=\"%23f0f0f0\"/><text x=\"50%\" y=\"50%\" font-family=\"Arial\" font-size=\"14\" fill=\"%23999\" text-anchor=\"middle\">图片加载失败</text></svg>'"/></div>`).join('')}</div>` : ''}
-                            ${message.extendInfo ? `<div class="message-extend-info">额外信息: ${extendInfo}</div>` : ''}
+                            <button class="session-detail-user-btn" type="button" onclick="fetchSessionUserInfo('${escapeHtml(String(sessionId))}', event)">查询用户信息</button>
                         </div>
-                    `;
-                });
-
-                html += '</div></div>';
-            });
-
-            html += '</div></div>';
-
-            resultsDiv.innerHTML = html;
-
-            // 自动批量查询会话详情
-            if (sessionIds.length > 0) {
-                fetchSessionDetails(sessionIds);
-            }
+                    </div>
+                    <div class="session-detail-chat-list">
+                        ${messages.length > 0 ? messages.map(message => renderSessionMessageItem(message)).join('') : `
+                            <div class="session-detail-empty">
+                                <div class="empty-state-title">没有消息数据</div>
+                                <div class="empty-state-desc">当前会话还没有可展示的聊天记录。</div>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
         }
 
-        function toggleSessionById(sessionId, event) {
-            if (event) {
-                event.stopPropagation();
-            }
-            const sessionEl = document.querySelector(`.session[data-session-id="${sessionId}"]`);
-            if (!sessionEl) return;
-            const content = sessionEl.querySelector('.session-content');
-            if (!content) return;
-            const isOpen = content.style.display !== 'none';
-            content.style.display = isOpen ? 'none' : 'block';
-            updateSessionToggleButton(sessionEl, !isOpen);
-        }
-
-        function updateSessionToggleButton(sessionEl, expanded) {
-            const btn = sessionEl.querySelector('.session-toggle-btn');
-            if (!btn) return;
-            btn.textContent = expanded ? '▼ 收起' : '▶ 展开';
-            btn.classList.toggle('expanded', expanded);
-        }
-
-        // ================== 批量查询会话详情 ==================
-        async function fetchSessionDetails(sessionIds) {
-            if (!sessionIds || sessionIds.length === 0) {
+        async function fetchSessionMessages(sessionId) {
+            const normalizedSessionId = String(sessionId || '').trim();
+            if (!normalizedSessionId) {
                 return;
             }
 
             if (!currentQueryMerchantId) {
-                console.warn('商户ID不存在，跳过会话详情查询');
+                showError('商户ID不存在，请重新查询会话');
                 return;
             }
 
-            if (!API.queryBySessionIds) {
-                console.warn('会话详情查询接口未配置');
+            if (!API.sessionMessageList) {
+                showError('请先配置会话消息接口');
                 return;
             }
+
+            currentSessionDetailState = {
+                selectedSessionId: normalizedSessionId,
+                selectedSession: findSessionSummaryById(normalizedSessionId),
+                loading: true,
+                error: '',
+                messages: []
+            };
+            rerenderSessionWorkbench();
+
+            const requestToken = ++latestSessionDetailToken;
 
             try {
-                // 将 sessionId 转换为 Long 类型数组
-                const sessionIdList = sessionIds.map(id => {
-                    const num = parseInt(id);
-                    return isNaN(num) ? null : num;
-                }).filter(id => id !== null);
-
-                if (sessionIdList.length === 0) {
-                    console.warn('没有有效的会话ID');
-                    return;
-                }
-
-                const requestBody = {
-                    merchantId: currentQueryMerchantId,
-                    sessionIdList: sessionIdList
-                };
-
-                console.log('批量查询会话详情，请求参数:', requestBody);
-
-                const response = await fetch(API.queryBySessionIds, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
+                const params = new URLSearchParams({
+                    merchantId: String(currentQueryMerchantId),
+                    sessionId: normalizedSessionId
                 });
+                const response = await fetch(`${API.sessionMessageList}?${params.toString()}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
-                console.log('会话详情查询结果:', data);
+                const result = normalizeApiResult(data, '会话消息');
+                const messages = Array.isArray(result) ? result : [];
 
-                const sessionDetails = data.result || data;
-
-                if (Array.isArray(sessionDetails) && sessionDetails.length > 0) {
-                    // 缓存会话详情
-                    sessionDetails.forEach(detail => {
-                        if (detail.sessionId) {
-                            sessionDetailsCache.set(String(detail.sessionId), detail);
-                        }
-                    });
-
-                    // 更新会话头部信息
-                    updateSessionHeaders();
+                if (requestToken !== latestSessionDetailToken) {
+                    return;
                 }
+
+                currentSessionDetailState = {
+                    selectedSessionId: normalizedSessionId,
+                    selectedSession: findSessionSummaryById(normalizedSessionId),
+                    loading: false,
+                    error: '',
+                    messages
+                };
+                rerenderSessionWorkbench();
             } catch (error) {
-                console.error('查询会话详情失败:', error);
+                console.error('Error fetching session messages:', error);
+                if (requestToken !== latestSessionDetailToken) {
+                    return;
+                }
+
+                currentSessionDetailState = {
+                    selectedSessionId: normalizedSessionId,
+                    selectedSession: findSessionSummaryById(normalizedSessionId),
+                    loading: false,
+                    error: error.message,
+                    messages: []
+                };
+                rerenderSessionWorkbench();
             }
         }
 
-        // 更新会话头部显示会话详情
-        function updateSessionHeaders() {
-            const sessionElements = document.querySelectorAll('.session');
+        function rerenderSessionWorkbench() {
+            displayMessages({
+                list: Array.isArray(sessionQueryState.currentPageList) ? sessionQueryState.currentPageList : [],
+                total: sessionQueryState.total,
+                page: sessionQueryState.page,
+                pageSize: sessionQueryState.pageSize,
+                queryMeta: {
+                    merchantId: sessionQueryState.merchantId,
+                    merchantName: sessionQueryState.merchantName,
+                    startTime: sessionQueryState.startTime,
+                    endTime: sessionQueryState.endTime,
+                    feedbackStatus: sessionQueryState.feedbackStatus,
+                    isTurnHuman: sessionQueryState.isTurnHuman
+                }
+            });
+        }
 
-            // 统计各类型会话数量
-            const stats = {
-                all: 0,
-                merchant: 0,
-                manual: 0,
-                other: 0
+        function findSessionSummaryById(sessionId) {
+            const currentPageList = Array.isArray(sessionQueryState.currentPageList) ? sessionQueryState.currentPageList : [];
+            return currentPageList.find(item => String(item?.sessionId ?? item?.id ?? '') === String(sessionId)) || null;
+        }
+
+        function renderSessionMessageItem(message) {
+            const messageType = String(message?.type || '').trim().toUpperCase();
+            if (messageType === 'TIP') {
+                return `
+                    <div class="chat-tip-row">
+                        <span class="chat-tip-bubble">${escapeHtml(message?.content || '-')}</span>
+                    </div>
+                `;
+            }
+
+            const from = String(message?.from || '').trim().toUpperCase();
+            const isRight = from === 'CUSTOMER';
+            const roleLabel = isRight ? '客服' : '用户';
+            const wrapperClass = isRight ? 'chat-row right' : 'chat-row left';
+            const bubbleClass = isRight ? 'chat-bubble service' : 'chat-bubble user';
+            const messageTypeLabel = formatMessageTypeLabel(messageType || message?.type || '-');
+            const messageTypeTone = getMessageTypeToneClass(messageType);
+            const faqHtml = renderFaqList(message?.faq);
+            const picturesHtml = renderMessagePictures(message?.pictures);
+            const rawPayload = buildMessageRawPayload(message);
+
+            return `
+                <div class="${wrapperClass}">
+                    <div class="chat-message-stack ${isRight ? 'align-right' : ''}">
+                        <div class="chat-message-meta ${isRight ? 'align-right' : ''}">
+                            <span class="chat-role-badge ${isRight ? 'service' : 'user'}">${roleLabel}</span>
+                            <span class="chat-type-badge ${messageTypeTone}">${escapeHtml(messageTypeLabel)}</span>
+                            <span class="chat-time">${escapeHtml(formatDisplayTime(message?.createDt || '-'))}</span>
+                        </div>
+                        <div class="${bubbleClass}">
+                            <div class="chat-message-content">${renderMessageContent(message?.content || '-')}</div>
+                            ${picturesHtml}
+                            ${faqHtml}
+                            ${rawPayload ? `
+                                <details class="chat-raw-details">
+                                    <summary>展开原始内容</summary>
+                                    <pre class="chat-raw-json"><code>${escapeHtml(JSON.stringify(rawPayload, null, 2))}</code></pre>
+                                </details>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMessagePictures(pictures) {
+            if (!Array.isArray(pictures) || pictures.length === 0) {
+                return '';
+            }
+
+            return `
+                <div class="chat-picture-grid">
+                    ${pictures.map(pic => `
+                        <div class="picture-item">
+                            <img src="${escapeHtml(String(pic))}" alt="消息图片" onclick="openModal(this.src)">
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderFaqList(faq) {
+            if (!faq) {
+                return '';
+            }
+
+            const faqItems = Array.isArray(faq) ? faq : [faq];
+            const normalizedItems = faqItems.map(item => normalizeFaqItem(item)).filter(Boolean);
+            if (normalizedItems.length === 0) {
+                return '';
+            }
+
+            return `
+                <div class="chat-faq-block">
+                    <div class="chat-faq-title">FAQ</div>
+                    <ul class="chat-faq-list">
+                        ${normalizedItems.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function normalizeFaqItem(item) {
+            if (item === null || item === undefined) {
+                return '';
+            }
+
+            if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') {
+                return String(item);
+            }
+
+            if (typeof item === 'object') {
+                return item.question || item.title || item.content || item.answer || JSON.stringify(item);
+            }
+
+            return '';
+        }
+
+        function formatMessageTypeLabel(type) {
+            const normalized = String(type || '').trim().toUpperCase();
+            const typeLabelMap = {
+                TEXT: '文字',
+                IMG: '图片',
+                VIDEO: '视频',
+                COMPLEX: '复合',
+                FAQ: '常见问题',
+                TIP: '提示',
+                MERCHANT_EMAIL_FORM: '商户联系邮箱表单',
+                CUSTOMER_EMAIL_FORM: '客户联系邮箱表单',
+                PRODUCTS: '商品列表'
             };
-
-            sessionElements.forEach(sessionEl => {
-                const sessionId = sessionEl.getAttribute('data-session-id');
-                const detail = sessionDetailsCache.get(sessionId);
-
-                if (detail) {
-                    // 统计并设置 scene 类型
-                    const scene = detail.scene || '';
-                    sessionEl.setAttribute('data-scene', scene);
-
-                    // 根据场景分类
-                    const sceneLower = scene.toLowerCase();
-                    if (sceneLower === 'merchant') {
-                        stats.merchant++;
-                    } else if (sceneLower === 'manual_handoff') {
-                        stats.manual++;
-                    } else {
-                        stats.other++;
-                    }
-
-                    const titleEl = sessionEl.querySelector('.session-title');
-                    if (titleEl && !titleEl.dataset.enhanced) {
-                        // 标记已增强，避免重复处理
-                        titleEl.dataset.enhanced = 'true';
-
-                        // 构建会话信息展示
-                        let infoHtml = `
-                            <div class="session-detail-info">
-                                <div class="session-detail-row">
-                                    <span class="session-detail-label">会话状态:</span>
-                                    <span class="session-detail-value">${detail.status || 'N/A'}</span>
-                                </div>
-                                ${detail.tagName ? `
-                                <div class="session-detail-row">
-                                    <span class="session-detail-label">标签:</span>
-                                    <span class="session-detail-value">${detail.tagName}</span>
-                                </div>
-                                ` : ''}
-                                ${detail.scene ? `
-                                <div class="session-detail-row">
-                                    <span class="session-detail-label">场景:</span>
-                                    <span class="session-detail-value">${detail.scene}</span>
-                                </div>
-                                ` : ''}
-                                ${detail.feedbackStatus !== null && detail.feedbackStatus !== undefined ? `
-                                <div class="session-detail-row">
-                                    <span class="session-detail-label">反馈状态:</span>
-                                    <span class="session-detail-value">${detail.feedbackStatus}</span>
-                                </div>
-                                ` : ''}
-                                ${detail.feedbackStatusDesc ? `
-                                <div class="session-detail-row">
-                                    <span class="session-detail-label">反馈状态:</span>
-                                    <span class="session-detail-value">${detail.feedbackStatusDesc}</span>
-                                </div>
-                                ` : ''}
-                                ${detail.isTurnHuman !== null && detail.isTurnHuman !== undefined ? `
-                                <div class="session-detail-row">
-                                    <span class="session-detail-label">转人工:</span>
-                                    <span class="session-detail-value ${detail.isTurnHuman === 1 ? 'turn-human-yes' : 'turn-human-no'}">${detail.isTurnHuman === 1 ? '是' : '否'}</span>
-                                </div>
-                                ` : ''}
-                                ${detail.lastMessage ? `
-                                <div class="session-detail-row">
-                                    <span class="session-detail-label">最后消息:</span>
-                                    <span class="session-detail-value">${detail.lastMessage.substring(0, 100)}${detail.lastMessage.length > 100 ? '...' : ''}</span>
-                                </div>
-                                ` : ''}
-                            </div>
-                        `;
-
-                        // 在会话头部后面插入会话详情
-                        const headerEl = sessionEl.querySelector('.session-header');
-                        if (headerEl) {
-                            const detailDiv = document.createElement('div');
-                            detailDiv.className = 'session-detail-container';
-                            detailDiv.innerHTML = infoHtml;
-                            headerEl.insertAdjacentElement('afterend', detailDiv);
-                        }
-                    }
-                } else {
-                    // 没有详情的会话归为"其他"
-                    stats.other++;
-                }
-            });
-
-            // 更新 tab 计数
-            stats.all = sessionElements.length;
-            updateTabCounts(stats);
+            return typeLabelMap[normalized] || (type || '-');
         }
 
-        // 更新 tab 按钮的计数
-        function updateTabCounts(stats) {
-            const tabs = document.querySelectorAll('.session-tab');
-            tabs.forEach(tab => {
-                const tabType = tab.getAttribute('data-tab');
-                const count = stats[tabType] || 0;
-
-                // 更新按钮文本
-                let label = '';
-                switch(tabType) {
-                    case 'all':
-                        label = `全部 (${count})`;
-                        break;
-                    case 'merchant':
-                        label = `前台 (${count})`;
-                        break;
-                    case 'manual':
-                        label = `转人工 (${count})`;
-                        break;
-                    case 'other':
-                        label = `其他 (${count})`;
-                        break;
-                }
-                tab.textContent = label;
-            });
+        function getMessageTypeToneClass(type) {
+            const normalized = String(type || '').trim().toUpperCase();
+            const toneMap = {
+                TEXT: 'tone-neutral',
+                IMG: 'tone-info',
+                VIDEO: 'tone-human',
+                COMPLEX: 'tone-warning',
+                FAQ: 'tone-success',
+                TIP: 'tone-muted',
+                MERCHANT_EMAIL_FORM: 'tone-warning',
+                CUSTOMER_EMAIL_FORM: 'tone-info',
+                PRODUCTS: 'tone-human'
+            };
+            return toneMap[normalized] || 'tone-neutral';
         }
 
-        // 切换 tab 显示
-        function switchSessionTab(tabType) {
-            // 更新 tab 按钮状态
-            const tabs = document.querySelectorAll('.session-tab');
-            tabs.forEach(tab => {
-                if (tab.getAttribute('data-tab') === tabType) {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
+        function buildMessageRawPayload(message) {
+            const payload = {};
+            if (message?.merchantEmailForm !== null && message?.merchantEmailForm !== undefined) {
+                payload.merchantEmailForm = message.merchantEmailForm;
+            }
+            if (message?.customerEmailForm !== null && message?.customerEmailForm !== undefined) {
+                payload.customerEmailForm = message.customerEmailForm;
+            }
+            if (message?.products !== null && message?.products !== undefined) {
+                payload.products = message.products;
+            }
+
+            return Object.keys(payload).length > 0 ? payload : null;
+        }
+
+        function renderSessionBadge(text, toneClass, title = '') {
+            const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
+            return `<span class="session-status-badge ${toneClass}"${titleAttr}>${escapeHtml(text)}</span>`;
+        }
+
+        function renderSessionEmptyState() {
+            return `
+                <div class="empty-state session-empty-state">
+                    <div class="empty-state-title">没有找到会话</div>
+                    <div class="empty-state-desc">调整商户、时间范围或可选筛选项后重新查询。</div>
+                </div>
+            `;
+        }
+
+        function renderSessionPagination(currentPage, totalPages, total) {
+            if (total <= 0) {
+                return '';
+            }
+
+            const pageButtons = buildSessionPageNumbers(currentPage, totalPages).map(item => {
+                if (item === '...') {
+                    return '<span class="session-pagination-ellipsis">...</span>';
                 }
-            });
 
-            // 过滤显示会话
-            const sessions = document.querySelectorAll('.session');
-            sessions.forEach(session => {
-                const scene = session.getAttribute('data-scene');
-                const sceneLower = (scene || '').toLowerCase();
+                const isActive = item === currentPage;
+                return `
+                    <button
+                        class="session-page-btn ${isActive ? 'active' : ''}"
+                        type="button"
+                        ${isActive ? 'disabled' : ''}
+                        onclick="goToSessionPage(${item})"
+                    >${item}</button>
+                `;
+            }).join('');
 
-                let shouldShow = false;
-                switch(tabType) {
-                    case 'all':
-                        shouldShow = true;
-                        break;
-                    case 'merchant':
-                        shouldShow = sceneLower === 'merchant';
-                        break;
-                    case 'manual':
-                        shouldShow = sceneLower === 'manual_handoff';
-                        break;
-                    case 'other':
-                        shouldShow = sceneLower !== 'merchant' && sceneLower !== 'manual_handoff';
-                        break;
+            return `
+                <div class="session-pagination">
+                    <div class="session-pagination-summary">共 ${total} 条</div>
+                    <div class="session-pagination-controls">
+                        <button class="session-page-nav" type="button" ${currentPage <= 1 ? 'disabled' : ''} onclick="goToSessionPage(${currentPage - 1})">上一页</button>
+                        ${pageButtons}
+                        <button class="session-page-nav" type="button" ${currentPage >= totalPages ? 'disabled' : ''} onclick="goToSessionPage(${currentPage + 1})">下一页</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function buildSessionPageNumbers(currentPage, totalPages) {
+            if (totalPages <= 7) {
+                return Array.from({ length: totalPages }, (_, index) => index + 1);
+            }
+
+            const pages = new Set([1, totalPages, currentPage, currentPage - 1, currentPage + 1]);
+            if (currentPage <= 3) {
+                pages.add(2);
+                pages.add(3);
+                pages.add(4);
+            }
+            if (currentPage >= totalPages - 2) {
+                pages.add(totalPages - 1);
+                pages.add(totalPages - 2);
+                pages.add(totalPages - 3);
+            }
+
+            const orderedPages = Array.from(pages)
+                .filter(page => page >= 1 && page <= totalPages)
+                .sort((left, right) => left - right);
+
+            const result = [];
+            orderedPages.forEach((page, index) => {
+                if (index > 0 && page - orderedPages[index - 1] > 1) {
+                    result.push('...');
                 }
-
-                session.style.display = shouldShow ? 'block' : 'none';
+                result.push(page);
             });
+            return result;
+        }
+
+        function getSessionToneClass(value, type = 'status') {
+            const normalized = String(value || '').trim().toUpperCase();
+            if (!normalized) {
+                return 'tone-neutral';
+            }
+
+            if (type === 'feedback') {
+                const feedbackToneMap = {
+                    AI_PROCESSING: 'tone-info',
+                    AI_SOLVED: 'tone-success',
+                    AI_NOT_SOLVED: 'tone-danger',
+                    MANUAL_INTERVENTION: 'tone-human',
+                    MANUAL_INTERVENTION_END: 'tone-muted'
+                };
+                return feedbackToneMap[normalized] || 'tone-neutral';
+            }
+
+            const statusToneMap = {
+                PROCESSING: 'tone-warning',
+                WAIT_HUMAN_PROCESS: 'tone-human',
+                PROCESSED: 'tone-success'
+            };
+            return statusToneMap[normalized] || 'tone-neutral';
+        }
+
+        function normalizeTurnHumanValue(value) {
+            return value === true || value === 1 || value === '1' || String(value).toLowerCase() === 'true';
+        }
+
+        function formatSessionStatusLabel(status) {
+            const normalized = String(status || '').trim().toUpperCase();
+            const statusLabelMap = {
+                PROCESSING: '处理中',
+                WAIT_HUMAN_PROCESS: '等待人工处理',
+                PROCESSED: '处理结束'
+            };
+            return statusLabelMap[normalized] || (status || '-');
+        }
+
+        function formatFeedbackStatusLabel(status, fallbackDesc = '') {
+            const normalized = String(status || '').trim().toUpperCase();
+            return FEEDBACK_STATUS_LABEL_MAP[normalized] || fallbackDesc || status || '-';
+        }
+
+        function formatFilterTurnHuman(value) {
+            if (value === '' || value === null || value === undefined) {
+                return '全部';
+            }
+            return String(value) === 'true' ? '是' : '否';
         }
 
         function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            const loading = document.getElementById('loading');
+            const resultShell = document.getElementById('resultShell');
+            const loadingText = loading?.querySelector('.loading-text');
+
+            if (loadingText) {
+                loadingText.textContent = currentModule === 'statistics' ? '正在汇总统计数据...' : '正在加载数据...';
+            }
+
+            loading?.classList.toggle('active', show);
+            loading?.setAttribute('aria-hidden', show ? 'false' : 'true');
+            resultShell?.classList.toggle('is-loading', show);
 
             // 更新当前模块的按钮状态
             const buttonMap = {
@@ -1681,11 +2319,11 @@
             if (btn) {
                 if (show) {
                     btn.classList.add('loading-btn');
-                    btn.dataset.originalText = btn.innerText;
+                    btn.dataset.originalHtml = btn.innerHTML;
                     btn.innerText = '查询中...';
                 } else {
                     btn.classList.remove('loading-btn');
-                    btn.innerText = btn.dataset.originalText || '查询';
+                    btn.innerHTML = btn.dataset.originalHtml || '查询';
                 }
             }
         }
@@ -1703,7 +2341,7 @@
         function openModal(imageSrc) {
             const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImage');
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
             modalImg.src = imageSrc;
         }
 
@@ -1776,7 +2414,7 @@
             const resultsDiv = document.getElementById('results');
 
             if (!data) {
-                resultsDiv.innerHTML = '<p>没有找到人设数据</p>';
+                renderResultsContent('<p>没有找到人设数据</p>');
                 return;
             }
 
@@ -1818,7 +2456,7 @@
             // JSON 展示
             html += createJsonResultCard(data, '原始JSON数据');
 
-            resultsDiv.innerHTML = html;
+            renderResultsContent(html);
         }
 
         // ================== 店铺信息查询 ==================
@@ -1932,7 +2570,7 @@
             const resultsDiv = document.getElementById('results');
 
             if (!data) {
-                resultsDiv.innerHTML = '<p>没有找到店铺信息</p>';
+                renderResultsContent('<p>没有找到店铺信息</p>');
                 return;
             }
 
@@ -2028,7 +2666,7 @@
             // JSON 展示
             html += createJsonResultCard(data, '原始JSON数据');
 
-            resultsDiv.innerHTML = html;
+            renderResultsContent(html);
         }
 
         // 商户设置字段中文映射（优先人工映射，兜底自动翻译）
@@ -2675,9 +3313,60 @@
             }
         }
 
+        function positionUserInfoPopover(triggerElement) {
+            const popover = document.getElementById('userInfoPopover');
+            if (!popover) {
+                return;
+            }
+
+            const margin = 12;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const triggerRect = triggerElement?.getBoundingClientRect();
+
+            if (!triggerRect) {
+                popover.style.left = `${Math.max(margin, (viewportWidth - 380) / 2)}px`;
+                popover.style.top = `${Math.max(margin, (viewportHeight - 320) / 2)}px`;
+                popover.dataset.placement = 'bottom';
+                popover.style.setProperty('--popover-arrow-left', '48px');
+                popover.style.setProperty('--popover-origin-x', '48px');
+                return;
+            }
+
+            const popoverWidth = Math.min(420, viewportWidth - margin * 2);
+            const estimatedHeight = Math.min(380, Math.max(280, viewportHeight * 0.56));
+            const gap = 14;
+            const spaceBelow = viewportHeight - triggerRect.bottom - margin;
+            const spaceAbove = triggerRect.top - margin;
+            const placement = spaceBelow >= estimatedHeight || spaceBelow >= spaceAbove ? 'bottom' : 'top';
+
+            let left = triggerRect.left + triggerRect.width / 2 - popoverWidth / 2;
+            left = Math.min(Math.max(margin, left), viewportWidth - popoverWidth - margin);
+
+            let top = placement === 'bottom'
+                ? triggerRect.bottom + gap
+                : triggerRect.top - estimatedHeight - gap;
+
+            top = Math.max(margin, Math.min(top, viewportHeight - estimatedHeight - margin));
+
+            const triggerCenter = triggerRect.left + triggerRect.width / 2;
+            const arrowLeft = Math.min(
+                Math.max(triggerCenter - left, 26),
+                popoverWidth - 26
+            );
+
+            popover.dataset.placement = placement;
+            popover.style.left = `${left}px`;
+            popover.style.top = `${top}px`;
+            popover.style.setProperty('--popover-arrow-left', `${arrowLeft}px`);
+            popover.style.setProperty('--popover-origin-x', `${arrowLeft}px`);
+        }
+
         // ================== 会话用户信息查询 ==================
         async function fetchSessionUserInfo(sessionId, event) {
-            event.stopPropagation(); // 阻止事件冒泡，避免触发会话展开/收起
+            if (event) {
+                event.stopPropagation();
+            }
 
             if (!sessionId) {
                 alert('会话ID不能为空');
@@ -2685,7 +3374,7 @@
             }
 
             if (!currentQueryMerchantId) {
-                alert('商户ID不存在，请重新查询消息');
+                alert('商户ID不存在，请重新查询会话');
                 return;
             }
 
@@ -2694,29 +3383,21 @@
             const overlay = document.getElementById('popoverOverlay');
             const content = document.getElementById('popoverContent');
 
-            // 计算悬浮窗口位置（相对于点击按钮）
-            const btnRect = event.target.getBoundingClientRect();
-            const popoverWidth = 360;
-            const popoverHeight = 300;
-            let left = btnRect.left;
-            let top = btnRect.bottom + 8;
-
-            // 确保不超出视口右边
-            if (left + popoverWidth > window.innerWidth) {
-                left = window.innerWidth - popoverWidth - 16;
+            const triggerElement = event?.currentTarget || event?.target;
+            activeUserInfoTrigger = triggerElement || null;
+            if (!triggerElement) {
+                content.innerHTML = buildInlineLoadingMarkup('加载用户信息中...');
+                positionUserInfoPopover(null);
+                popover.classList.add('active');
+                overlay.classList.add('active');
+            } else {
+                positionUserInfoPopover(triggerElement);
+                popover.classList.add('active');
+                overlay.classList.add('active');
             }
-            // 确保不超出视口下边
-            if (top + popoverHeight > window.innerHeight) {
-                top = btnRect.top - popoverHeight - 8;
-            }
-
-            popover.style.left = `${Math.max(8, left)}px`;
-            popover.style.top = `${Math.max(8, top)}px`;
-            popover.classList.add('active');
-            overlay.classList.add('active');
 
             // 显示加载状态
-            content.innerHTML = '<div class="popover-loading">加载中...</div>';
+            content.innerHTML = buildInlineLoadingMarkup('加载用户信息中...');
 
             try {
                 // 使用 getSessionUserInfo 接口，传递 merchantId 和 sessionId
@@ -2738,7 +3419,7 @@
                 displayUserInfoInPopover(result);
             } catch (error) {
                 console.error('Error fetching user info:', error);
-                content.innerHTML = `<div class="popover-error">查询失败: ${error.message}</div>`;
+                renderContentWithTransition(content, `<div class="popover-error">查询失败: ${escapeHtml(error.message)}</div>`);
             }
         }
 
@@ -2746,7 +3427,7 @@
             const content = document.getElementById('popoverContent');
 
             if (!data || Object.keys(data).length === 0) {
-                content.innerHTML = '<div class="popover-error">暂无用户信息</div>';
+                renderContentWithTransition(content, '<div class="popover-error">暂无用户信息</div>');
                 return;
             }
 
@@ -2767,28 +3448,52 @@
                 isShopifyCustomer: '是否Shopify客户'
             };
 
-            let html = '<div class="user-info-grid">';
+            const preferredFieldOrder = [
+                'externalUserId',
+                'nickname',
+                'email',
+                'openId',
+                'deviceId',
+                'merchantId',
+                'status',
+                'isShopifyCustomer',
+                'lastLoginIp',
+                'avatarUrl',
+                'createDt',
+                'updateDt',
+                'id'
+            ];
+            const orderedKeys = [
+                ...preferredFieldOrder.filter(key => Object.prototype.hasOwnProperty.call(data, key)),
+                ...Object.keys(data).filter(key => !preferredFieldOrder.includes(key))
+            ];
 
-            Object.keys(data).forEach(key => {
+            let html = '<div class="user-info-list">';
+
+            orderedKeys.forEach(key => {
                 const label = userFieldLabels[key] || key;
                 let value = data[key];
+                let valueClass = 'user-info-item-value';
 
                 if (value === null || value === undefined) {
                     value = 'N/A';
+                    valueClass += ' user-info-item-empty';
                 } else if (typeof value === 'object') {
                     value = JSON.stringify(value);
+                } else {
+                    value = String(value);
                 }
 
                 html += `
                     <div class="user-info-item">
                         <div class="user-info-item-label">${label}</div>
-                        <div class="user-info-item-value">${value}</div>
+                        <div class="${valueClass}">${escapeHtml(value)}</div>
                     </div>
                 `;
             });
 
             html += '</div>';
-            content.innerHTML = html;
+            renderContentWithTransition(content, html);
         }
 
         function closeUserInfoPopover() {
@@ -2796,7 +3501,13 @@
             const overlay = document.getElementById('popoverOverlay');
             popover.classList.remove('active');
             overlay.classList.remove('active');
+            activeUserInfoTrigger = null;
         }
 
         // 点击遮罩层关闭悬浮窗口
         document.getElementById('popoverOverlay').addEventListener('click', closeUserInfoPopover);
+        window.addEventListener('resize', () => {
+            if (activeUserInfoTrigger && document.getElementById('userInfoPopover')?.classList.contains('active')) {
+                positionUserInfoPopover(activeUserInfoTrigger);
+            }
+        });
