@@ -4,7 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aura 工具</title>
-    <link rel="stylesheet" href="aura_tool/css/style.css?v=2026.04.01-15">
+    <script>
+        (function () {
+            const THEME_STORAGE_KEY = 'aura_theme';
+            let resolvedTheme = 'light';
+
+            try {
+                const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+                if (storedTheme === 'light' || storedTheme === 'dark') {
+                    resolvedTheme = storedTheme;
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    resolvedTheme = 'dark';
+                }
+            } catch (error) {
+                resolvedTheme = 'light';
+            }
+
+            document.documentElement.setAttribute('data-theme', resolvedTheme);
+            document.documentElement.style.colorScheme = resolvedTheme;
+        }());
+    </script>
+    <link rel="stylesheet" href="aura_tool/css/style.css?v=2026.04.05-16">
 </head>
 <body>
     <div class="page-wrapper">
@@ -12,6 +32,49 @@
         <div class="page-header">
             <h1 class="page-title">Aura 工具</h1>
             <div class="header-actions">
+                <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换到夜间模式" aria-pressed="false">
+                    <span class="theme-toggle-track" aria-hidden="true">
+                        <span class="theme-toggle-track-icon theme-toggle-track-icon-sun">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <path d="M12 2v2.2"></path>
+                                <path d="M12 19.8V22"></path>
+                                <path d="m4.93 4.93 1.56 1.56"></path>
+                                <path d="m17.51 17.51 1.56 1.56"></path>
+                                <path d="M2 12h2.2"></path>
+                                <path d="M19.8 12H22"></path>
+                                <path d="m4.93 19.07 1.56-1.56"></path>
+                                <path d="m17.51 6.49 1.56-1.56"></path>
+                            </svg>
+                        </span>
+                        <span class="theme-toggle-track-icon theme-toggle-track-icon-moon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3c-.12.57-.21 1.16-.21 1.79A8 8 0 0 0 19 12.8c.64 0 1.26-.08 1.85-.21z"></path>
+                            </svg>
+                        </span>
+                        <span class="theme-toggle-thumb">
+                            <span class="theme-toggle-thumb-icon theme-toggle-thumb-icon-sun">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="4"></circle>
+                                    <path d="M12 2v2.2"></path>
+                                    <path d="M12 19.8V22"></path>
+                                    <path d="m4.93 4.93 1.56 1.56"></path>
+                                    <path d="m17.51 17.51 1.56 1.56"></path>
+                                    <path d="M2 12h2.2"></path>
+                                    <path d="M19.8 12H22"></path>
+                                    <path d="m4.93 19.07 1.56-1.56"></path>
+                                    <path d="m17.51 6.49 1.56-1.56"></path>
+                                </svg>
+                            </span>
+                            <span class="theme-toggle-thumb-icon theme-toggle-thumb-icon-moon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3c-.12.57-.21 1.16-.21 1.79A8 8 0 0 0 19 12.8c.64 0 1.26-.08 1.85-.21z"></path>
+                                </svg>
+                            </span>
+                        </span>
+                    </span>
+                    <span class="theme-toggle-text" id="themeToggleText">日间模式</span>
+                </button>
                 <button class="guide-entry-btn session-ui-entry-btn" type="button" onclick="openSessionUiGuideModal()" aria-label="打开会话 UI 图例">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="4" width="18" height="16" rx="2"></rect>
@@ -257,6 +320,6 @@
         </div>
     </div>
 
-    <script src="aura_tool/js/main.js?v=2026.04.01-15"></script>
+    <script src="aura_tool/js/main.js?v=2026.04.05-16"></script>
 </body>
 </html>

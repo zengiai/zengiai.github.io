@@ -37,13 +37,16 @@
         };
 
         const ENV_STORAGE_KEY = 'aura_env';
+        const THEME_STORAGE_KEY = 'aura_theme';
+        const THEME_TRANSITION_CLASS = 'theme-transitioning';
+        const THEME_TRANSITION_DURATION = 420;
         const GUIDE_DOC_PATH = 'aura_tool/GUIDE.md';
-        const GUIDE_VERSION = '2026.04.01-15';
+        const GUIDE_VERSION = '2026.04.05-16';
         const GUIDE_ANNOUNCEMENT_STORAGE_KEY = 'aura_tool_guide_announcement_seen_version';
         const GUIDE_UPDATE_HIGHLIGHTS = [
+            '右上角新增日夜间模式滑动按钮，支持太阳/月亮图标切换并记住你的选择。',
             '聊天详情里，CUSTOMER 侧客服标签会区分显示 AI 或人工。',
-            'MERCHANT_EMAIL_FORM、CUSTOMER_EMAIL_FORM、PRODUCTS 支持按结构化卡片渲染。',
-            '除 TEXT、COMPLEX 外，空内容不再回退显示为 -。'
+            'MERCHANT_EMAIL_FORM、CUSTOMER_EMAIL_FORM、PRODUCTS 支持按结构化卡片渲染。'
         ];
         const SESSION_UI_GUIDE_MARKER = ':::session-ui-guide:::';
         const SESSION_UI_GUIDE_STEPS = [
@@ -102,6 +105,9 @@
         // 当前统计看板导出上下文(用于导出饼图分类占比)
         let currentStatisticsExportContext = null;
         let activeUserInfoTrigger = null;
+        let currentTheme = 'light';
+        let themeTransitionTimer = 0;
+        let systemThemeMediaQuery = null;
 
         // 会话查询上下文
         let sessionQueryState = createDefaultSessionQueryState();
@@ -116,6 +122,7 @@
 
         // 页面加载时初始化
         window.addEventListener('DOMContentLoaded', () => {
+            initThemeToggle();
             initEnvSelector();
             initDateTimeInputs();
             initFeedbackStatusOptions();
@@ -180,6 +187,109 @@
                 markSeenOnClose: false,
                 showUpdateHighlights: false
             };
+        }
+
+        function initThemeToggle() {
+            currentTheme = resolvePreferredTheme();
+            applyTheme(currentTheme, { persist: false, skipTransition: true });
+
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    applyTheme(nextTheme);
+                });
+            }
+
+            if (!window.matchMedia) {
+                return;
+            }
+
+            systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const handleSystemThemeChange = event => {
+                const storedTheme = readStoredTheme();
+                if (storedTheme === 'light' || storedTheme === 'dark') {
+                    return;
+                }
+                applyTheme(event.matches ? 'dark' : 'light', { persist: false });
+            };
+
+            if (typeof systemThemeMediaQuery.addEventListener === 'function') {
+                systemThemeMediaQuery.addEventListener('change', handleSystemThemeChange);
+            } else if (typeof systemThemeMediaQuery.addListener === 'function') {
+                systemThemeMediaQuery.addListener(handleSystemThemeChange);
+            }
+        }
+
+        function readStoredTheme() {
+            try {
+                const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+                return storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : '';
+            } catch (error) {
+                console.warn('Unable to read theme from localStorage:', error);
+                return '';
+            }
+        }
+
+        function resolvePreferredTheme() {
+            const storedTheme = readStoredTheme();
+            if (storedTheme) {
+                return storedTheme;
+            }
+
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                return 'dark';
+            }
+
+            return 'light';
+        }
+
+        function applyTheme(theme, options = {}) {
+            const normalizedTheme = theme === 'dark' ? 'dark' : 'light';
+            const { persist = true, skipTransition = false } = options;
+            const root = document.documentElement;
+
+            currentTheme = normalizedTheme;
+            root.setAttribute('data-theme', normalizedTheme);
+            root.style.colorScheme = normalizedTheme;
+
+            if (!skipTransition) {
+                animateThemeTransition();
+            }
+
+            if (persist) {
+                try {
+                    localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
+                } catch (error) {
+                    console.warn('Unable to persist theme:', error);
+                }
+            }
+
+            syncThemeToggle();
+        }
+
+        function animateThemeTransition() {
+            const root = document.documentElement;
+            window.clearTimeout(themeTransitionTimer);
+            root.classList.add(THEME_TRANSITION_CLASS);
+            themeTransitionTimer = window.setTimeout(() => {
+                root.classList.remove(THEME_TRANSITION_CLASS);
+            }, THEME_TRANSITION_DURATION);
+        }
+
+        function syncThemeToggle() {
+            const themeToggle = document.getElementById('themeToggle');
+            const themeToggleText = document.getElementById('themeToggleText');
+
+            if (themeToggle) {
+                const isDark = currentTheme === 'dark';
+                themeToggle.setAttribute('aria-pressed', String(isDark));
+                themeToggle.setAttribute('aria-label', isDark ? '切换到日间模式' : '切换到夜间模式');
+            }
+
+            if (themeToggleText) {
+                themeToggleText.textContent = currentTheme === 'dark' ? '夜间模式' : '日间模式';
+            }
         }
 
         function initFeedbackStatusOptions() {
