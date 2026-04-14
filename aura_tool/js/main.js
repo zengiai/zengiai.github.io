@@ -41,10 +41,10 @@
         const THEME_TRANSITION_CLASS = 'theme-transitioning';
         const THEME_TRANSITION_DURATION = 420;
         const GUIDE_DOC_PATH = 'aura_tool/GUIDE.md';
-        const GUIDE_VERSION = '2026.04.05-16';
+        const GUIDE_VERSION = '2026.04.14-1';
         const GUIDE_ANNOUNCEMENT_STORAGE_KEY = 'aura_tool_guide_announcement_seen_version';
         const GUIDE_UPDATE_HIGHLIGHTS = [
-            '右上角新增日夜间模式滑动按钮，支持太阳/月亮图标切换并记住你的选择。',
+            '点击左侧会话查看右侧详情时，改为局部更新，不再整块白闪重绘。',
             '聊天详情里，CUSTOMER 侧客服标签会区分显示 AI 或人工。',
             'MERCHANT_EMAIL_FORM、CUSTOMER_EMAIL_FORM、PRODUCTS 支持按结构化卡片渲染。'
         ];
@@ -2245,7 +2245,22 @@
                 };
             }
 
-            renderResultsContent(`
+            renderResultsContent(buildSessionWorkbenchHtml({
+                list,
+                total,
+                page,
+                pageSize
+            }));
+        }
+
+        function buildSessionWorkbenchHtml(payload) {
+            const list = Array.isArray(payload?.list) ? payload.list : [];
+            const total = Number(payload?.total) || 0;
+            const page = Number(payload?.page) || 1;
+            const pageSize = Number(payload?.pageSize) || SESSION_PAGE_SIZE;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+            return `
                 <div class="session-workbench">
                     <section class="session-workbench-panel session-workbench-list">
                         <div class="session-workbench-header">
@@ -2262,7 +2277,7 @@
                         </div>
                     </aside>
                 </div>
-            `);
+            `;
         }
 
         function renderSessionSummaryCard(session) {
@@ -2279,7 +2294,7 @@
             const isSelected = String(currentSessionDetailState.selectedSessionId || '') === String(sessionId);
 
             return `
-                <article class="session-summary-card ${isSelected ? 'selected' : ''}" onclick="fetchSessionMessages('${escapeHtml(String(sessionId))}')" role="button" tabindex="0">
+                <article class="session-summary-card ${isSelected ? 'selected' : ''}" data-session-id="${escapeHtml(String(sessionId))}" onclick="fetchSessionMessages('${escapeHtml(String(sessionId))}')" role="button" tabindex="0">
                     <div class="session-summary-line session-summary-line-primary">
                         <span class="session-summary-id">${escapeHtml(String(sessionId))}</span>
                         <span class="session-summary-divider">|</span>
@@ -2426,7 +2441,7 @@
         }
 
         function rerenderSessionWorkbench() {
-            displayMessages({
+            const payload = {
                 list: Array.isArray(sessionQueryState.currentPageList) ? sessionQueryState.currentPageList : [],
                 total: sessionQueryState.total,
                 page: sessionQueryState.page,
@@ -2439,6 +2454,33 @@
                     feedbackStatus: sessionQueryState.feedbackStatus,
                     isTurnHuman: sessionQueryState.isTurnHuman
                 }
+            };
+
+            const results = document.getElementById('results');
+            const workbench = results?.querySelector('.session-workbench');
+            if (!workbench) {
+                displayMessages(payload);
+                return;
+            }
+
+            syncSessionWorkbenchSelection(workbench);
+
+            const detailBody = workbench.querySelector('.session-workbench-detail-body');
+            if (detailBody) {
+                detailBody.innerHTML = renderSessionDetailPanel();
+            }
+        }
+
+        function syncSessionWorkbenchSelection(workbench) {
+            if (!workbench) {
+                return;
+            }
+
+            const selectedSessionId = String(currentSessionDetailState.selectedSessionId || '');
+            const cards = workbench.querySelectorAll('.session-summary-card[data-session-id]');
+            cards.forEach(card => {
+                const cardSessionId = String(card.getAttribute('data-session-id') || '');
+                card.classList.toggle('selected', cardSessionId === selectedSessionId);
             });
         }
 
@@ -3544,7 +3586,7 @@
                                 <span class="discount-type">${triggerText}</span>
                                 <span class="discount-title">${discount.title || '未命名折扣'}</span>
                             </div>
-                            <button class="discount-toggle" id="${toggleId}-toggle" onclick="toggleDiscountCard('${toggleId}', event)">▼</button>
+                            <button type="button" class="discount-toggle" id="${toggleId}-toggle" onclick="toggleDiscountCard('${toggleId}', event)">▼</button>
                         </div>
                         <div class="discount-details" id="${toggleId}">
                             <div class="discount-detail-row">
@@ -3624,6 +3666,7 @@
 
         function toggleDiscountCard(detailId, event) {
             if (event) {
+                event.preventDefault();
                 event.stopPropagation();
             }
             const detailEl = document.getElementById(detailId);
