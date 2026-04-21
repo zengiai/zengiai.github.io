@@ -41,12 +41,12 @@
         const THEME_TRANSITION_CLASS = 'theme-transitioning';
         const THEME_TRANSITION_DURATION = 420;
         const GUIDE_DOC_PATH = 'aura_tool/GUIDE.md';
-        const GUIDE_VERSION = '2026.04.14-1';
+        const GUIDE_VERSION = '2026.04.21-5';
         const GUIDE_ANNOUNCEMENT_STORAGE_KEY = 'aura_tool_guide_announcement_seen_version';
         const GUIDE_UPDATE_HIGHLIGHTS = [
-            '点击左侧会话查看右侧详情时，改为局部更新，不再整块白闪重绘。',
-            '聊天详情里，CUSTOMER 侧客服标签会区分显示 AI 或人工。',
-            'MERCHANT_EMAIL_FORM、CUSTOMER_EMAIL_FORM、PRODUCTS 支持按结构化卡片渲染。'
+            '导出结果改成只输出 conversations 数组内容，不再包外层对象。',
+            '会话详情里的 conversations JSON 浮窗去掉过程性说明，只保留必要信息。',
+            'IMG 消息会自动转成 image 类型并优先提取图片 URL。'
         ];
         const SESSION_UI_GUIDE_MARKER = ':::session-ui-guide:::';
         const SESSION_UI_GUIDE_STEPS = [
@@ -459,6 +459,7 @@
 
             closeGuideModal();
             closeUserInfoPopover();
+            closeSessionConversationExportModal();
         }
 
         function buildGuideDocumentHtml(markdown) {
@@ -2346,6 +2347,7 @@
             const selectedSession = currentSessionDetailState.selectedSession || {};
             const messages = Array.isArray(currentSessionDetailState.messages) ? currentSessionDetailState.messages : [];
             const sessionId = selectedSession?.sessionId ?? currentSessionDetailState.selectedSessionId;
+            const hasExportableMessages = countSessionConversationExportMessages(messages) > 0;
 
             return `
                 <div class="session-detail-shell">
@@ -2354,7 +2356,15 @@
                             <div>
                                 <div class="session-detail-title">会话详情</div>
                             </div>
-                            <button class="session-detail-user-btn" type="button" onclick="fetchSessionUserInfo('${escapeHtml(String(sessionId))}', event)">查询用户信息</button>
+                            <div class="session-detail-actions">
+                                <button
+                                    class="session-detail-export-btn"
+                                    type="button"
+                                    onclick="generateSessionConversationJson(this)"
+                                    ${hasExportableMessages ? '' : 'disabled'}
+                                >生成并复制 JSON</button>
+                                <button class="session-detail-user-btn" type="button" onclick="fetchSessionUserInfo('${escapeHtml(String(sessionId))}', event)">查询用户信息</button>
+                            </div>
                         </div>
                     </div>
                     <div class="session-detail-chat-list">
@@ -2367,6 +2377,260 @@
                     </div>
                 </div>
             `;
+        }
+
+        function countSessionConversationExportMessages(messages) {
+            return buildSessionConversationMessages(messages).length;
+        }
+
+        function generateSessionConversationJson(button) {
+            const selectedSession = currentSessionDetailState.selectedSession || {};
+            const messages = Array.isArray(currentSessionDetailState.messages) ? currentSessionDetailState.messages : [];
+            const exportData = buildSessionConversationExportData(selectedSession, messages);
+            const conversation = Array.isArray(exportData) ? exportData[0] : null;
+
+            if (!conversation || !Array.isArray(conversation.messages) || conversation.messages.length === 0) {
+                return;
+            }
+
+            const jsonString = JSON.stringify(exportData, null, 2);
+            openSessionConversationExportModal(jsonString);
+            copyTextValue(jsonString, button);
+        }
+
+        function renderSessionConversationExportPreview(jsonString) {
+            return `
+                <section class="session-conversation-export-card" role="dialog" aria-modal="true" aria-labelledby="sessionConversationExportTitle">
+                    <div class="session-conversation-export-header">
+                        <div>
+                            <div id="sessionConversationExportTitle" class="session-conversation-export-title">conversations 预览</div>
+                        </div>
+                        <button class="popover-close" type="button" onclick="closeSessionConversationExportModal()" aria-label="关闭 conversations JSON 浮窗">&times;</button>
+                    </div>
+                    <pre class="chat-raw-json session-conversation-export-json"><code>${escapeHtml(jsonString)}</code></pre>
+                </section>
+            `;
+        }
+
+        function openSessionConversationExportModal(jsonString) {
+            const overlay = document.getElementById('sessionConversationExportOverlay');
+            const content = document.getElementById('sessionConversationExportContent');
+            if (!overlay || !content) {
+                return;
+            }
+
+            content.innerHTML = renderSessionConversationExportPreview(jsonString);
+            overlay.classList.add('active');
+        }
+
+        function closeSessionConversationExportModal() {
+            const overlay = document.getElementById('sessionConversationExportOverlay');
+            const content = document.getElementById('sessionConversationExportContent');
+            if (!overlay || !content) {
+                return;
+            }
+
+            overlay.classList.remove('active');
+            content.innerHTML = '';
+        }
+
+        function buildSessionConversationExportData(session, messages) {
+            const conversation = {
+                conversation_id: String(session?.sessionId ?? currentSessionDetailState.selectedSessionId ?? '').trim(),
+                status: normalizeConversationExportStatus(session),
+                messages: buildSessionConversationMessages(messages)
+            };
+            const customerId = resolveSessionCustomerId(session, messages);
+            const productId = resolveSessionProductId(session, messages);
+
+            if (customerId) {
+                conversation.customer_id = customerId;
+            }
+            if (productId) {
+                conversation.product_id = productId;
+            }
+
+            return [conversation];
+        }
+
+        function buildSessionConversationMessages(messages) {
+            if (!Array.isArray(messages) || messages.length === 0) {
+                return [];
+            }
+
+            return messages.flatMap(message => {
+                const messageType = String(message?.type || '').trim().toUpperCase();
+                const role = resolveConversationExportRole(message);
+                const timestamp = normalizeConversationExportTimestamp(message?.createDt || message?.updateDt || '');
+
+                if (messageType === 'TEXT') {
+                    const content = String(message?.content ?? '').trim();
+                    if (!content) {
+                        return [];
+                    }
+
+                    return [{
+                        role,
+                        content,
+                        timestamp
+                    }];
+                }
+
+                if (messageType === 'IMG') {
+                    return normalizeConversationExportImageContents(message).map(content => ({
+                        role,
+                        content,
+                        type: 'image',
+                        timestamp
+                    }));
+                }
+
+                return [];
+            }).filter(item => item.content && item.timestamp);
+        }
+
+        function resolveConversationExportRole(message) {
+            const from = String(message?.from || '').trim().toUpperCase();
+            if (from === 'CUSTOMER') {
+                return normalizeBooleanValue(message?.isHuman) === true ? 'human_agent' : 'ai';
+            }
+            return 'customer';
+        }
+
+        function normalizeConversationExportTimestamp(value) {
+            const normalized = String(value ?? '').trim();
+            if (!normalized) {
+                return '';
+            }
+
+            if (/^\d{4}-\d{2}-\d{2}T/.test(normalized)) {
+                return normalized;
+            }
+
+            if (/^\d{4}-\d{2}-\d{2}\s/.test(normalized)) {
+                return normalized.replace(' ', 'T');
+            }
+
+            return normalized;
+        }
+
+        function normalizeConversationExportStatus(session) {
+            const rawStatus = String(session?.status || '').trim().toUpperCase();
+            const feedbackStatus = String(session?.feedbackStatus || '').trim().toUpperCase();
+
+            if (
+                normalizeTurnHumanValue(session?.isTurnHuman)
+                || rawStatus === 'WAIT_HUMAN_PROCESS'
+                || feedbackStatus === 'MANUAL_INTERVENTION'
+                || feedbackStatus === 'MANUAL_INTERVENTION_END'
+            ) {
+                return 'transferred_to_human';
+            }
+
+            if (feedbackStatus === 'AI_SOLVED' || rawStatus === 'PROCESSED') {
+                return 'resolved';
+            }
+
+            return 'unresolved';
+        }
+
+        function resolveSessionCustomerId(session, messages) {
+            const messageCustomerId = Array.isArray(messages)
+                ? messages
+                    .map(message => readFirstNonEmptyString([
+                        message?.senderId,
+                        message?.customerId,
+                        message?.externalUserId,
+                        message?.userId
+                    ]))
+                    .find(Boolean)
+                : '';
+
+            return readFirstNonEmptyString([
+                session?.customerId,
+                session?.externalUserId,
+                session?.userId,
+                session?.senderId,
+                messageCustomerId
+            ]);
+        }
+
+        function resolveSessionProductId(session, messages) {
+            const productFromMessages = Array.isArray(messages)
+                ? messages
+                    .map(message => {
+                        const products = normalizeProductsPayload(message);
+                        if (!Array.isArray(products) || products.length === 0) {
+                            return '';
+                        }
+
+                        const firstProduct = products[0];
+                        return readFirstNonEmptyString([
+                            firstProduct?.id,
+                            firstProduct?.productId,
+                            firstProduct?.itemId,
+                            firstProduct?.sku,
+                            firstProduct?.handle
+                        ]);
+                    })
+                    .find(Boolean)
+                : '';
+
+            return readFirstNonEmptyString([
+                session?.productId,
+                session?.product_id,
+                session?.itemId,
+                session?.item_id,
+                session?.goodsId,
+                session?.sku,
+                productFromMessages
+            ]);
+        }
+
+        function normalizeConversationExportImageContents(message) {
+            const pictureUrls = Array.isArray(message?.pictures)
+                ? message.pictures
+                    .map(item => String(item ?? '').trim())
+                    .filter(isLikelyImageExportValue)
+                : [];
+
+            if (pictureUrls.length > 0) {
+                return Array.from(new Set(pictureUrls));
+            }
+
+            const parsedContent = parseJsonSafely(message?.content);
+            const contentCandidates = [
+                typeof message?.content === 'string' ? message.content : '',
+                parsedContent?.url,
+                parsedContent?.imageUrl,
+                parsedContent?.src,
+                ...(Array.isArray(parsedContent?.pictures) ? parsedContent.pictures : [])
+            ];
+
+            return Array.from(new Set(
+                contentCandidates
+                    .map(item => String(item ?? '').trim())
+                    .filter(isLikelyImageExportValue)
+            ));
+        }
+
+        function isLikelyImageExportValue(value) {
+            const normalized = String(value ?? '').trim();
+            if (!normalized) {
+                return false;
+            }
+
+            return /^(https?:\/\/|\/\/|data:image\/|\/)/i.test(normalized)
+                || /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(normalized);
+        }
+
+        function readFirstNonEmptyString(candidates) {
+            if (!Array.isArray(candidates)) {
+                return '';
+            }
+
+            const matchedValue = candidates.find(candidate => String(candidate ?? '').trim());
+            return matchedValue === undefined || matchedValue === null ? '' : String(matchedValue).trim();
         }
 
         async function fetchSessionMessages(sessionId) {
@@ -3732,6 +3996,10 @@
                 return;
             }
 
+            copyTextValue(text, btn);
+        }
+
+        function copyTextValue(text, btn) {
             // 检查浏览器是否支持 clipboard API
             if (!navigator.clipboard || !navigator.clipboard.writeText) {
                 // 降级方案：使用传统复制方法
@@ -3740,20 +4008,30 @@
             }
 
             navigator.clipboard.writeText(text).then(() => {
-                const originalText = btn.innerText;
-                btn.innerText = '已复制 ✓';
-                btn.style.backgroundColor = '#218838';
-                btn.disabled = true;
-                setTimeout(() => {
-                    btn.innerText = originalText;
-                    btn.style.backgroundColor = '#28a745';
-                    btn.disabled = false;
-                }, 2000);
+                showCopyButtonSuccess(btn);
             }).catch(err => {
                 console.error('Clipboard API 复制失败:', err);
                 // 如果 clipboard API 失败，尝试降级方案
                 fallbackCopyToClipboard(text, btn);
             });
+        }
+
+        function showCopyButtonSuccess(btn) {
+            if (!btn) {
+                return;
+            }
+
+            const originalText = btn.dataset.originalText || btn.innerText;
+            btn.dataset.originalText = originalText;
+            btn.innerText = '已复制 ✓';
+            btn.classList.add('copied');
+            btn.disabled = true;
+
+            window.setTimeout(() => {
+                btn.innerText = btn.dataset.originalText || originalText;
+                btn.classList.remove('copied');
+                btn.disabled = false;
+            }, 2000);
         }
 
         // 降级复制方案（兼容 HTTP 环境）
@@ -3773,15 +4051,7 @@
                 document.body.removeChild(textarea);
 
                 if (successful) {
-                    const originalText = btn.innerText;
-                    btn.innerText = '已复制 ✓';
-                    btn.style.backgroundColor = '#218838';
-                    btn.disabled = true;
-                    setTimeout(() => {
-                        btn.innerText = originalText;
-                        btn.style.backgroundColor = '#28a745';
-                        btn.disabled = false;
-                    }, 2000);
+                    showCopyButtonSuccess(btn);
                 } else {
                     alert('复制失败，请手动复制');
                 }
@@ -3984,6 +4254,11 @@
 
         // 点击遮罩层关闭悬浮窗口
         document.getElementById('popoverOverlay').addEventListener('click', closeUserInfoPopover);
+        document.getElementById('sessionConversationExportOverlay').addEventListener('click', event => {
+            if (event.target?.id === 'sessionConversationExportOverlay') {
+                closeSessionConversationExportModal();
+            }
+        });
         window.addEventListener('resize', () => {
             if (activeUserInfoTrigger && document.getElementById('userInfoPopover')?.classList.contains('active')) {
                 positionUserInfoPopover(activeUserInfoTrigger);
