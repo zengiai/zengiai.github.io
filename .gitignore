@@ -1,5 +1,7 @@
 .idea/
 node_modules
 aura_tool_old.html
+aura_tool.html
+aura_tool/
 .claude/
 .qoder/
