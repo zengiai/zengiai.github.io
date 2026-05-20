@@ -1,0 +1,11 @@
+[
+  {
+    "slug": "high-concurrency-inventory",
+    "title": "高并发库存扣减设计：从防超卖到最终一致性",
+    "summary": "以电商秒杀链路为例，拆解 Redis 预扣减、MQ 异步落库、数据库乐观锁兜底与对账补偿的设计边界。",
+    "tags": ["Java", "库存", "高并发"],
+    "updated": "2026-05-20",
+    "readingMinutes": 8,
+    "path": "./articles/high-concurrency-inventory.md"
+  }
+]

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>曾嘉琪 - 技术文章</title>
+    <meta name="description" content="曾嘉琪的技术文章归档，记录 Java 后端、高并发、稳定性治理与 Agent 工程实践。" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231f2937'/%3E%3Ctext x='50%25' y='56%25' text-anchor='middle' font-size='32' fill='white' font-family='Arial'%3EZ%3C/text%3E%3C/svg%3E"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      crossorigin="anonymous"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./assets/docs.css?v=20260520-docs-md" />
+    <script src="./assets/docs.js?v=20260520-docs-md" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header" aria-label="全站导航">
+        <a class="brand" href="../../" aria-label="曾嘉琪简历首页">曾嘉琪</a>
+        <nav class="global-nav" aria-label="顶部导航">
+          <a class="en-type" lang="en" href="../../">Resume</a>
+          <a class="is-active en-type" lang="en" href="./">Docs</a>
+          <a class="en-type" lang="en" href="https://github.com/zengiai" target="_blank" rel="noreferrer">Projects</a>
+          <a class="en-type" lang="en" href="mailto:280326572@qq.com">Contact</a>
+        </nav>
+      </header>
+
+      <main class="docs-shell">
+        <section class="docs-intro" aria-labelledby="docs-title">
+          <p class="eyebrow en-type" lang="en">Technical Notes</p>
+          <h1 id="docs-title">技术文章</h1>
+          <p>
+            记录 Java 后端、高并发链路、稳定性治理与工程工具实践。正文使用 Markdown 维护，页面读取静态索引后渲染详情。
+          </p>
+        </section>
+
+        <div class="docs-layout">
+          <aside class="docs-sidebar" aria-label="文章列表">
+            <div class="sidebar-heading">
+              <span class="en-type" lang="en">Articles</span>
+              <span id="articleCount">0</span>
+            </div>
+            <div class="article-list" id="articleList" aria-live="polite"></div>
+          </aside>
+
+          <article class="doc-reader" aria-live="polite">
+            <header class="doc-header">
+              <div class="doc-meta-line" id="docMeta">Loading</div>
+              <h2 id="docTitle">正在加载文章</h2>
+              <p id="docSummary">请稍候。</p>
+            </header>
+            <div class="markdown-body" id="markdownBody"></div>
+          </article>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
