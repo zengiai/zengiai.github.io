@@ -7,5 +7,50 @@
     "updated": "2026-05-20",
     "readingMinutes": 8,
     "path": "./articles/high-concurrency-inventory.md"
+  },
+  {
+    "slug": "sharding-jdk21-optimization-summary",
+    "title": "分表优化总结",
+    "summary": "总结 JDK 21 升级后 ShardingSphere 分表规则、Mapper 绑定和可观测性治理的优化路径。",
+    "tags": ["Java", "ShardingSphere", "JDK21"],
+    "updated": "2026-04-07",
+    "readingMinutes": 14,
+    "path": "./articles/sharding-jdk21-optimization-summary.md"
+  },
+  {
+    "slug": "market-query-fallback-pattern",
+    "title": "主路径失败自动降级模式使用说明",
+    "summary": "说明读链路中主查询失败后自动回退到兼容路径的适用边界、模板结构和监控补充点。",
+    "tags": ["降级", "读链路", "稳定性"],
+    "updated": "2026-03-24",
+    "readingMinutes": 15,
+    "path": "./articles/market-query-fallback-pattern.md"
+  },
+  {
+    "slug": "SSE_MESSAGE_SPEC",
+    "title": "UserChat SSE 消息块规范",
+    "summary": "定义 UserChat 接口通过 SSE 流式返回的消息块格式、事件类型和前端处理建议。",
+    "tags": ["SSE", "接口规范", "Agent"],
+    "updated": "2026-03-17",
+    "readingMinutes": 12,
+    "path": "./articles/SSE_MESSAGE_SPEC.md"
+  },
+  {
+    "slug": "auto-configuration-issue-summary",
+    "title": "Spring Boot 自动配置遗漏问题总结",
+    "summary": "复盘 SDK 因自动配置缺失导致注解切面不生效的问题，覆盖根因、修复方案和验证方式。",
+    "tags": ["Spring Boot", "自动配置", "SDK"],
+    "updated": "2026-03-12",
+    "readingMinutes": 20,
+    "path": "./articles/auto-configuration-issue-summary.md"
+  },
+  {
+    "slug": "apollo-config-rebind-httpclient-report",
+    "title": "Apollo 配置变更触发 HttpClient 连接池关闭问题分析报告",
+    "summary": "分析 Apollo 配置变更触发 Spring Cloud rebinder 后关闭 HttpClient 连接池的风险链路和规避方案。",
+    "tags": ["Apollo", "HttpClient", "Spring Cloud"],
+    "updated": "2026-03-06",
+    "readingMinutes": 14,
+    "path": "./articles/apollo-config-rebind-httpclient-report.md"
   }
 ]
