@@ -1,0 +1,8 @@
+runtime:
+  model: "gpt-5.4"
+  reasoning_effort: "medium"
+
+interface:
+  display_name: "PM Orchestrator"
+  short_description: "Coordinates staged delivery across specialist roles"
+  default_prompt: "Use $pm-orchestrator to coordinate a project delivery workflow across requirement, architecture, development, review, and QA stages."

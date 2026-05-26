@@ -1,0 +1,8 @@
+runtime:
+  model: "gpt-5.5"
+  reasoning_effort: "xhigh"
+
+interface:
+  display_name: "Gate Reviewer"
+  short_description: "Reviews readiness risks before development begins"
+  default_prompt: "Use $gate-reviewer to run a pre-development readiness gate across scope, architecture, data, concurrency, risk, testing, observability, and release."

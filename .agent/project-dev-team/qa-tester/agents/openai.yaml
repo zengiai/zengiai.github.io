@@ -1,0 +1,8 @@
+runtime:
+  model: "gpt-5.4"
+  reasoning_effort: "medium"
+
+interface:
+  display_name: "QA Tester"
+  short_description: "Designs tests, classifies defects, and validates releases"
+  default_prompt: "Use $qa-tester to design test cases, classify defects, and verify release readiness for Java, Python, or frontend projects."

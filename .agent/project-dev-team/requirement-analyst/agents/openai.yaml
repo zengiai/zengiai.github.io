@@ -1,0 +1,8 @@
+runtime:
+  model: "gpt-5.4"
+  reasoning_effort: "medium"
+
+interface:
+  display_name: "Requirement Analyst"
+  short_description: "Clarifies scope, ambiguity, and acceptance criteria"
+  default_prompt: "Use $requirement-analyst to analyze ambiguous requirements, compare options, and define acceptance criteria."

@@ -1,0 +1,94 @@
+:root,
+body,
+.font-resume {
+  font-family: "Google Sans Code", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif;
+  font-kerning: normal;
+}
+
+.font-resume *,
+.font-resume .tracking-tight,
+.font-resume .tracking-\[0\.22em\],
+.font-resume .tracking-\[0\.24em\] {
+  letter-spacing: 0 !important;
+}
+
+.font-resume main > section:first-child {
+  padding-bottom: 2.5rem;
+}
+
+.font-resume main > section:first-child > p:first-child {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 700;
+}
+
+.font-resume main > section:first-child h2 {
+  display: inline-block;
+  font-size: 3rem;
+  line-height: 3.1rem;
+  font-weight: 700;
+}
+
+.font-resume main > section:first-child h2::after {
+  content: "";
+  display: block;
+  width: 4.5rem;
+  height: 3px;
+  margin-top: 0.75rem;
+  background: #b45f3d;
+}
+
+.font-resume main > section:first-child h2 + p {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  color: #4b4036;
+}
+
+.font-resume section h3 {
+  font-size: 2rem;
+  line-height: 2.35rem;
+  font-weight: 700;
+}
+
+.font-resume #experience h4,
+.font-resume #projects h4 {
+  font-size: 1.55rem;
+  line-height: 1.95rem;
+  font-weight: 700;
+}
+
+.font-resume #education h4 {
+  font-size: 1.35rem;
+  line-height: 1.75rem;
+  font-weight: 700;
+}
+
+.font-resume #experience li,
+.font-resume #projects p {
+  font-size: 0.95rem;
+  line-height: 1.8rem;
+}
+
+.font-resume aside h1 {
+  font-size: 1.75rem;
+  line-height: 2.05rem;
+  font-weight: 700;
+}
+
+.font-resume aside nav button {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .font-resume main > section:first-child h2 {
+    font-size: 4.25rem;
+    line-height: 4.25rem;
+  }
+
+  .font-resume main > section:first-child h2 + p {
+    font-size: 1.45rem;
+    line-height: 2rem;
+  }
+}

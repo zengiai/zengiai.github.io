@@ -1,0 +1,8 @@
+runtime:
+  model: "gpt-5.4"
+  reasoning_effort: "medium"
+
+interface:
+  display_name: "Solution Architect"
+  short_description: "Designs modules, interfaces, risks, and rollout plans"
+  default_prompt: "Use $solution-architect to design a project solution with modules, interfaces, risks, and implementation boundaries."

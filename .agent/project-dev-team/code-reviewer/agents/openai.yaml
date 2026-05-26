@@ -1,0 +1,8 @@
+runtime:
+  model: "gpt-5.5"
+  reasoning_effort: "xhigh"
+
+interface:
+  display_name: "Code Reviewer"
+  short_description: "Reviews code risks across Java, Python, and frontend"
+  default_prompt: "Use $code-reviewer to review existing code for production risks, design drift, missing requirements, concurrency issues, transaction boundary problems, resource leaks, and test gaps."

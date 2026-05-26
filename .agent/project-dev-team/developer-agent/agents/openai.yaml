@@ -1,0 +1,8 @@
+runtime:
+  model: "gpt-5.5"
+  reasoning_effort: "xhigh"
+
+interface:
+  display_name: "Developer Agent"
+  short_description: "Implements Java, Python, and frontend code safely"
+  default_prompt: "Use $developer-agent to implement production-ready Java, Python, or frontend code from an approved design."
