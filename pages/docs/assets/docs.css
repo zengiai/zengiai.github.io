@@ -22,8 +22,9 @@ html {
 }
 
 body {
-  min-height: 100vh;
+  height: 100vh;
   margin: 0;
+  overflow: hidden;
   background: #ffffff;
 }
 
@@ -41,11 +42,16 @@ samp,
 }
 
 .page-shell {
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
   background: #ffffff;
 }
 
 .site-header {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -85,14 +91,20 @@ samp,
 }
 
 .docs-shell {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
   width: min(1080px, calc(100% - 72px));
   margin: 0 auto;
-  padding: 54px 0 72px;
+  overflow: hidden;
+  padding: 38px 0 0;
 }
 
 .docs-intro {
+  flex: none;
   max-width: 720px;
-  padding-bottom: 42px;
+  padding-bottom: 30px;
 }
 
 .eyebrow {
@@ -113,25 +125,23 @@ samp,
   letter-spacing: 0;
 }
 
-.docs-intro p {
-  margin: 18px 0 0;
-  color: #5f6875;
-  font-size: 1rem;
-  line-height: 1.76;
-}
-
 .docs-layout {
   display: grid;
-  grid-template-columns: 310px minmax(0, 1fr);
-  gap: 44px;
-  align-items: start;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(150px, 1fr) minmax(0, 5fr);
+  gap: 28px;
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
   border-top: 1px solid #e5e7eb;
-  padding-top: 34px;
+  padding-top: 26px;
 }
 
 .docs-sidebar {
-  position: sticky;
-  top: 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .sidebar-heading {
@@ -149,6 +159,10 @@ samp,
 .article-list {
   display: grid;
   gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  padding-bottom: 28px;
 }
 
 .article-card {
@@ -181,18 +195,11 @@ samp,
   font-weight: 760;
 }
 
-.article-card p {
-  margin: 8px 0 0;
-  color: #6b7280;
-  font-size: 0.84rem;
-  line-height: 1.62;
-}
-
 .article-card-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 10px;
   color: #7b8492;
   font-size: 0.74rem;
   line-height: 1.4;
@@ -212,6 +219,10 @@ samp,
 
 .doc-reader {
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 10px;
+  padding-bottom: 56px;
 }
 
 .doc-header {
@@ -375,6 +386,19 @@ samp,
 }
 
 @media (max-width: 860px) {
+  body {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .page-shell {
+    display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
   .site-header {
     align-items: flex-start;
     flex-direction: column;
@@ -396,22 +420,36 @@ samp,
   }
 
   .docs-shell {
+    display: block;
     width: min(100% - 44px, 760px);
+    overflow: visible;
     padding: 32px 0 56px;
   }
 
   .docs-layout {
     display: block;
+    overflow: visible;
     padding-top: 26px;
   }
 
   .docs-sidebar {
+    display: block;
     position: static;
+    overflow: visible;
     margin-bottom: 30px;
   }
 
   .article-list {
     grid-template-columns: 1fr;
+    overflow: visible;
+    padding-right: 0;
+    padding-bottom: 0;
+  }
+
+  .doc-reader {
+    overflow: visible;
+    padding-right: 0;
+    padding-bottom: 0;
   }
 }
 

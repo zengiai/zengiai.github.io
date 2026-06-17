@@ -269,9 +269,6 @@
           "<h2>" +
           escapeHtml(article.title) +
           "</h2>" +
-          "<p>" +
-          escapeHtml(article.summary || "") +
-          "</p>" +
           '<div class="article-card-meta">' +
           tags +
           "</div>" +
