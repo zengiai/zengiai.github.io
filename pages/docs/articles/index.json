@@ -1,5 +1,14 @@
 [
   {
+    "slug": "agent-trace-observability-eval-loop",
+    "title": "Eval开发日记-1：从 Trace 可观测到自动化评测闭环",
+    "summary": "复盘 Agent 评测平台从 Trace 上报、OTel 接入、LLM Judge、Case 沉淀到自动化回归闭环的工程演进。",
+    "tags": ["Agent", "LLM", "OpenTelemetry", "自动化评测", "工程化"],
+    "updated": "2026-06-17",
+    "readingMinutes": 10,
+    "path": "./articles/agent-trace-observability-eval-loop.md"
+  },
+  {
     "slug": "high-concurrency-inventory",
     "title": "高并发库存扣减设计：从防超卖到最终一致性",
     "summary": "以电商秒杀链路为例，拆解 Redis 预扣减、MQ 异步落库、数据库乐观锁兜底与对账补偿的设计边界。",
