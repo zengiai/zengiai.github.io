@@ -1,5 +1,14 @@
 [
   {
+    "slug": "agent-runtime-7x24-development-diary",
+    "title": "Eval开发日记-2：引入 Agent Runtime，让 7×24 Agent 自己跑起来",
+    "summary": "复盘独立 Agent Runtime、Telegram Gateway、Scheduler、异步评测与 Dashboard 轮询如何把评测工具推进到 7×24 常驻服务。",
+    "tags": ["Agent", "7x24", "Runtime", "Telegram", "异步评测", "Dashboard", "工程化"],
+    "updated": "2026-06-18",
+    "readingMinutes": 8,
+    "path": "./articles/agent-runtime-7x24-development-diary.md"
+  },
+  {
     "slug": "agent-trace-observability-eval-loop",
     "title": "Eval开发日记-1：从 Trace 可观测到自动化评测闭环",
     "summary": "复盘 Agent 评测平台从 Trace 上报、OTel 接入、LLM Judge、Case 沉淀到自动化回归闭环的工程演进。",
