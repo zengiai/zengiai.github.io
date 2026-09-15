@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>曾嘉琪 - 提示词集</title>
+    <meta
+      name="description"
+      content="曾嘉琪的提示词集，收录工程实践中的代码审查、方案设计、故障排查与写作提示词，支持一键复制。"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231f2937'/%3E%3Ctext x='50%25' y='56%25' text-anchor='middle' font-size='32' fill='white' font-family='Arial'%3EZ%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./assets/prompts.css?v=20260915-markdown" />
+    <script src="./assets/prompts.js?v=20260915-markdown" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <main class="prompts-shell">
+        <section class="prompts-intro" aria-labelledby="prompts-title">
+          <p class="eyebrow" lang="en">Prompt Library</p>
+          <h1 id="prompts-title">提示词集</h1>
+          <p class="intro-copy">
+            沉淀日常工作中反复打磨的提示词，覆盖代码审查、方案设计、故障排查与写作表达。
+            选择任一条目查看全文，并使用一键复制直接取用。
+          </p>
+        </section>
+
+        <div class="prompts-layout">
+          <aside class="prompts-sidebar" aria-label="提示词列表">
+            <div class="sidebar-heading">
+              <span lang="en">Prompts</span>
+              <span id="promptCount">0</span>
+            </div>
+            <div class="prompt-list" id="promptList" aria-live="polite"></div>
+          </aside>
+
+          <article class="prompt-reader" aria-live="polite">
+            <header class="prompt-header">
+              <div class="prompt-meta-line" id="promptMeta">Loading</div>
+              <div class="prompt-title-row">
+                <h2 id="promptTitle">正在加载提示词</h2>
+                <button class="copy-button" id="copyButton" type="button" disabled>复制提示词</button>
+              </div>
+              <p class="prompt-summary" id="promptSummary"></p>
+              <div class="prompt-tags" id="promptTags"></div>
+            </header>
+            <div class="prompt-body" id="promptBody">
+              <div class="state-message">正在加载提示词数据。</div>
+            </div>
+          </article>
+        </div>
+      </main>
+    </div>
+
+    <noscript>
+      <div class="noscript-note">提示词列表需要启用 JavaScript 后才能加载与复制。</div>
+    </noscript>
+  </body>
+</html>
